@@ -1,0 +1,104 @@
+# typed: strict
+# frozen_string_literal: true
+
+require 'danger'
+require 'packwerk'
+require 'sorbet-runtime'
+require 'danger-packwerk/packwerk_wrapper'
+
+module DangerPackwerk
+  # Note that Danger names the plugin (i.e. anything that inherits from `Danger::Plugin`) by taking the name of the class and gsubbing out "Danger"
+  # Therefore this plugin is simply called "packwerk"
+  class DangerPackwerk < Danger::Plugin
+    extend T::Sig
+
+    # We choose 15 because we want to err on the side of completeness and give users all of the information they need to help make their build pass,
+    # especially given all violations should fail the build anyways.
+    # We set a max (rather than unlimited) to avoid GitHub rate limiting and general spam if a PR does some sort of mass rename.
+    DEFAULT_MAX_COMMENTS = 15
+    OnFailure = T.type_alias { T.proc.params(offenses: T::Array[Packwerk::ReferenceOffense]).void }
+    DEFAULT_ON_FAILURE = T.let(->(offenses) {}, OnFailure)
+    OffensesFormatter = T.type_alias { T.proc.params(offenses: T::Array[Packwerk::ReferenceOffense]).returns(String) }
+    DEFAULT_OFFENSES_FORMATTER = T.let(->(offenses) { offenses.map(&:message).join("\n\n") }, OffensesFormatter)
+    DEFAULT_FAIL = false
+    DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
+
+    sig do
+      params(
+        max_comments: Integer,
+        offenses_formatter: OffensesFormatter,
+        fail_build: T::Boolean,
+        failure_message: String,
+        on_failure: OnFailure
+      ).void
+    end
+    def check(
+      max_comments: DEFAULT_MAX_COMMENTS,
+      offenses_formatter: DEFAULT_OFFENSES_FORMATTER,
+      fail_build: DEFAULT_FAIL,
+      failure_message: DEFAULT_FAILURE_MESSAGE,
+      on_failure: DEFAULT_ON_FAILURE
+    )
+      # This is important because by default, Danger will leave a concantenated list of all its messages if it can't find a commentable place in the
+      # diff to leave its message. This is an especially bad UX because it will be a huge wall of text not connected to the source of the issue.
+      # Furthermore, dismissing these ensures that something like moving a file from pack to pack does not trigger the danger message. That is,
+      # the danger message will only be triggered by actual code that someone has actually written in their PR.
+      # Another example would be if someone changes the list of dependencies of a package (e.g. to resolve a cyclic dependency). This would not
+      # trigger the warning message, which is good, since we only want to trigger on new code.
+      github.dismiss_out_of_range_messages
+
+      # https://github.com/danger/danger/blob/eca19719d3e585fe1cc46bc5377f9aa955ebf609/lib/danger/danger_core/plugins/dangerfile_git_plugin.rb#L80
+      renamed_files_after = git.renamed_files.map { |f| f[:after] }
+      targeted_files = (git.modified_files + git.added_files + renamed_files_after).select do |f|
+        path = Pathname.new(f)
+
+        # We probably want to check the `include` key of `packwerk.yml`. By default, this value is "**/*.{rb,rake,erb}",
+        # so we hardcode this in for now. If this blocks a user, we can take that opportunity to read from `packwerk.yml`.
+        extension_is_targeted = ['.erb', '.rake', '.rb'].include?(path.extname)
+
+        # If a file has been modified via a rename, then `git.modified_files` will return an array that includes that file's *original* name.
+        # Packwerk will ignore input files that do not exist, and when the PR only contains renamed Ruby files, that means packwerk check works
+        # off of an empty list. It's default behavior in that case is to scan *all* files, which can lead to abnormally long run times.
+        # To avoid this, we gracefully return if there are no targeted files.
+        # To avoid false negatives, we also look at renamed files after (above)
+        file_exists = path.exist?
+
+        extension_is_targeted && file_exists
+      end
+
+      return if targeted_files.empty?
+
+      current_comment_count = 0
+
+      packwerk_reference_offenses = PackwerkWrapper.get_offenses_for_files(targeted_files.to_a).compact
+
+      # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation
+      # they are (privacy or dependency). We put privacy and dependency violation messages in the same comment since they would occur on the same line.
+      packwerk_reference_offenses.group_by do |packwerk_reference_offense|
+        [
+          packwerk_reference_offense.reference.constant.name,
+          packwerk_reference_offense.location.line,
+          packwerk_reference_offense.reference.relative_path
+        ]
+      end.each do |_group, unique_packwerk_reference_offenses|
+        break if current_comment_count >= max_comments
+
+        current_comment_count += 1
+
+        reference_offense = T.must(unique_packwerk_reference_offenses.first)
+        line_number = reference_offense.location.line
+        referencing_file = reference_offense.reference.relative_path
+
+        message = offenses_formatter.call(unique_packwerk_reference_offenses)
+
+        markdown(message, file: referencing_file, line: line_number)
+      end
+
+      if current_comment_count > 0
+        fail(failure_message) if fail_build
+
+        on_failure.call(packwerk_reference_offenses)
+      end
+    end
+  end
+end

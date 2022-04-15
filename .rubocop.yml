@@ -1,0 +1,74 @@
+inherit_gem:
+require:
+  - rubocop-sorbet
+
+AllCops:
+  TargetRubyVersion: 2.6
+  NewCops: enable
+
+Sorbet/StrictSigil:
+  Enabled: true
+  Exclude:
+    - spec/**/*
+    - sorbet/**/*
+
+Layout/ExtraSpacing:
+  Enabled: true
+  Exclude:
+    - danger-packwerk.gemspec
+
+Layout/SpaceAroundOperators:
+  Enabled: true
+  Exclude:
+    - danger-packwerk.gemspec
+
+Sorbet/ValidSigil:
+  Enabled: true
+
+Gemspec/RequireMFA:
+  Enabled: false
+
+Layout/LineLength:
+  Enabled: false
+
+Metrics/BlockLength:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/SignalException:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/MultilineBlockChain:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/ModuleLength:
+  Enabled: false
+
+Sorbet/FalseSigil:
+  Enabled: false
+
+Lint/UnusedMethodArgument:
+  Enabled: false
+
+Metrics/AbcSize:
+  Enabled: false
+
+Style/GuardClause:
+  Enabled: false
+
+Style/NumericPredicate:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false
