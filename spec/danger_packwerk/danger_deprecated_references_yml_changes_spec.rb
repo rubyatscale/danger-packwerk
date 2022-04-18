@@ -56,18 +56,18 @@ module DangerPackwerk
       describe 'behavior when violations are added or removed' do
         context 'a deprecated_refrences.yml file is added (i.e. a pack has its first violation)' do
           let(:added_files) do
-            file = write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-              ---
-              packs/some_other_pack:
-                "OtherPackClass":
-                  violations:
-                  - privacy
-                  - dependency
-                  files:
-                  - packs/some_pack/some_class.rb
-            YML
-
-            [file.to_s]
+            [
+              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+                ---
+                packs/some_other_pack:
+                  "OtherPackClass":
+                    violations:
+                    - privacy
+                    - dependency
+                    files:
+                    - packs/some_pack/some_class.rb
+              YML
+            ]
           end
 
           it 'calls the before comment input proc' do
@@ -177,17 +177,17 @@ module DangerPackwerk
 
         context 'a deprecated_refrences.yml file is modified to remove violations' do
           let(:modified_files) do
-            file = write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-              ---
-              packs/some_other_pack:
-                "OtherPackClass":
-                  violations:
-                  - privacy
-                  files:
-                  - packs/some_pack/some_class.rb
-            YML
-
-            [file.to_s]
+            [
+              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+                ---
+                packs/some_other_pack:
+                  "OtherPackClass":
+                    violations:
+                    - privacy
+                    files:
+                    - packs/some_pack/some_class.rb
+              YML
+            ]
           end
 
           let(:some_pack_deprecated_references_before) do
@@ -228,18 +228,18 @@ module DangerPackwerk
 
         context 'a deprecated_refrences.yml file is modified to change violations in many files' do
           let(:modified_files) do
-            file = write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-              ---
-              packs/some_other_pack:
-                "OtherPackClass":
-                  violations:
-                  - privacy
-                  - dependency
-                  files:
-                  - packs/some_pack/some_class.rb
-            YML
-
-            [file.to_s]
+            [
+              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+                ---
+                packs/some_other_pack:
+                  "OtherPackClass":
+                    violations:
+                    - privacy
+                    - dependency
+                    files:
+                    - packs/some_pack/some_class.rb
+              YML
+            ]
           end
 
           let(:some_pack_deprecated_references_before) do
@@ -302,32 +302,32 @@ module DangerPackwerk
 
         context 'a deprecated_refrences.yml file is modified to add 30 and remove 15 violations' do
           let(:modified_files) do
-            file = write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-              ---
-              packs/some_other_pack:
-                "OtherPackClass":
-                  violations:
-                  - privacy
-                  - dependency
-                  files:
-                  - packs/some_pack/some_class1.rb
-                  - packs/some_pack/some_class2.rb
-                  - packs/some_pack/some_class3.rb
-                  - packs/some_pack/some_class4.rb
-                  - packs/some_pack/some_class5.rb
-                  - packs/some_pack/some_class6.rb
-                  - packs/some_pack/some_class7.rb
-                  - packs/some_pack/some_class8.rb
-                  - packs/some_pack/some_class9.rb
-                  - packs/some_pack/some_class10.rb
-                  - packs/some_pack/some_class11.rb
-                  - packs/some_pack/some_class12.rb
-                  - packs/some_pack/some_class13.rb
-                  - packs/some_pack/some_class14.rb
-                  - packs/some_pack/some_class15.rb
-            YML
-
-            [file.to_s]
+            [
+              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+                ---
+                packs/some_other_pack:
+                  "OtherPackClass":
+                    violations:
+                    - privacy
+                    - dependency
+                    files:
+                    - packs/some_pack/some_class1.rb
+                    - packs/some_pack/some_class2.rb
+                    - packs/some_pack/some_class3.rb
+                    - packs/some_pack/some_class4.rb
+                    - packs/some_pack/some_class5.rb
+                    - packs/some_pack/some_class6.rb
+                    - packs/some_pack/some_class7.rb
+                    - packs/some_pack/some_class8.rb
+                    - packs/some_pack/some_class9.rb
+                    - packs/some_pack/some_class10.rb
+                    - packs/some_pack/some_class11.rb
+                    - packs/some_pack/some_class12.rb
+                    - packs/some_pack/some_class13.rb
+                    - packs/some_pack/some_class14.rb
+                    - packs/some_pack/some_class15.rb
+              YML
+            ]
           end
 
           let(:some_pack_deprecated_references_before) do
