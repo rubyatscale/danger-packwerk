@@ -53,7 +53,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is added (i.e. a pack has its first violation)' do
+      context 'a deprecated_references.yml file is added (i.e. a pack has its first violation)' do
         let(:added_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
