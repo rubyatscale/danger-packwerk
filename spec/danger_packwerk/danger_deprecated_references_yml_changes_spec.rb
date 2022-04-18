@@ -337,15 +337,15 @@ module DangerPackwerk
               ---
               packs/some_other_pack:
                 "OtherPackClass":
-              ==================== DANGER_START
-              Hi! It looks like the pack defining `OtherPackClass` considers this private API.
-              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
-              ==================== DANGER_END
                   violations:
                   - privacy
                   files:
                   - packs/some_pack/some_class.rb
                   - packs/some_pack/some_other_class.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` considers this private API.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
             EXPECTED
           ).and_nothing_else
         end
@@ -414,15 +414,15 @@ module DangerPackwerk
                   - packs/some_pack/some_class.rb
                   - packs/some_pack/some_other_class.rb
                 "SomeOtherPackClass":
-              ==================== DANGER_START
-              Hi! It looks like the pack defining `SomeOtherPackClass` considers this private API.
-              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
-              ==================== DANGER_END
                   violations:
                   - privacy
                   files:
                   - packs/some_pack/some_class.rb
                   - packs/some_pack/some_other_class.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `SomeOtherPackClass` considers this private API.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
             EXPECTED
           ).and_nothing_else
         end
@@ -491,15 +491,15 @@ module DangerPackwerk
               ---
               packs/some_other_pack:
                 "OtherPackClass":
-              ==================== DANGER_START
-              Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
-              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
-              ==================== DANGER_END
                   violations:
                   - privacy
                   - dependency
                   files:
                   - packs/some_pack/some_class.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
             EXPECTED
           ).and_nothing_else
         end
@@ -598,15 +598,15 @@ module DangerPackwerk
               ---
               packs/some_other_pack:
                 "OtherPackClass":
-              ==================== DANGER_START
-              Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
-              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
-              ==================== DANGER_END
                   violations:
                   - privacy
                   - dependency
                   files:
                   - packs/some_pack/some_class1.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
+              ==================== DANGER_END
                   - packs/some_pack/some_class2.rb
                   - packs/some_pack/some_class3.rb
                   - packs/some_pack/some_class4.rb

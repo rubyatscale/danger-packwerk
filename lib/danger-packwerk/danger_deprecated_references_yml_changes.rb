@@ -44,8 +44,20 @@ module DangerPackwerk
       )
 
       current_comment_count = 0
-      violation_diff.added_violations.group_by(&:location).each do |location, violations|
+
+      violation_diff.added_violations.group_by(&:class_name).each do |class_name, violations|
         break if current_comment_count >= max_comments
+
+        # If we already had a violation on this constant, then the constant may not be in the visible diff,
+        # so we drop the comment on the reference to the file, which will always be in the diff.
+        # Note that we could also choose to *always* leave all comments on the first reference to the file, which would
+        # simplify our internal implementation (as we only have one place to put it, so we don't need to check `all_violations_before` at all).
+        # This might be best because then we don't need to expose more API on `ViolationDiff`.
+        location = if violation_diff.all_violations_before.any? { |v| v.class_name == class_name }
+                     T.must(violations.first).file_location
+                   else
+                     T.must(violations.first).class_name_location
+                   end
 
         markdown(
           added_offenses_formatter.call(violations),
@@ -61,6 +73,7 @@ module DangerPackwerk
     def get_violation_diff # rubocop:disable Naming/AccessorMethodName
       added_violations = T.let([], T::Array[BasicReferenceOffense])
       removed_violations = T.let([], T::Array[BasicReferenceOffense])
+      all_violations_before = T.let([], T::Array[BasicReferenceOffense])
 
       git.added_files.grep(DEPRECATED_REFERENCES_PATTERN).each do |added_deprecated_references_yml_file|
         # Since the file is added, we know on the base commit there are no violations related to this pack,
@@ -71,20 +84,23 @@ module DangerPackwerk
       git.deleted_files.grep(DEPRECATED_REFERENCES_PATTERN).each do |deleted_deprecated_references_yml_file|
         # Since the file is deleted, we know on the HEAD commit there are no violations related to this pack,
         # and that all violations from this file are deleted
-        removed_violations += get_violations_before_patch_for(deleted_deprecated_references_yml_file)
+        deleted_violations = get_violations_before_patch_for(deleted_deprecated_references_yml_file)
+        all_violations_before += deleted_violations
+        removed_violations += deleted_violations
       end
 
       git.modified_files.grep(DEPRECATED_REFERENCES_PATTERN).each do |modified_deprecated_references_yml_file|
         head_commit_violations = BasicReferenceOffense.from(modified_deprecated_references_yml_file)
         base_commit_violations = get_violations_before_patch_for(modified_deprecated_references_yml_file)
-
+        all_violations_before += base_commit_violations
         added_violations += head_commit_violations - base_commit_violations
         removed_violations += base_commit_violations - head_commit_violations
       end
 
       ViolationDiff.new(
         added_violations: added_violations,
-        removed_violations: removed_violations
+        removed_violations: removed_violations,
+        all_violations_before: all_violations_before
       )
     end
 

@@ -9,5 +9,6 @@ module DangerPackwerk
 
     const :added_violations, T::Array[BasicReferenceOffense]
     const :removed_violations, T::Array[BasicReferenceOffense]
+    const :all_violations_before, T::Array[BasicReferenceOffense]
   end
 end
