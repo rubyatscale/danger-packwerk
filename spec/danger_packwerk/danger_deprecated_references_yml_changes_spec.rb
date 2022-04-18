@@ -141,7 +141,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is deleted (i.e. a pack has all violations removed)' do
+      context 'a deprecated_references.yml file is deleted (i.e. a pack has all violations removed)' do
         let(:deleted_files) { ['packs/some_pack/deprecated_references.yml'] }
         let(:some_pack_deprecated_references_before) do
           write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
