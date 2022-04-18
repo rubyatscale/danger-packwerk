@@ -174,7 +174,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to remove violations' do
+      context 'a deprecated_refrences.yml file is modified to remove some, but not all, violations' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -222,6 +222,191 @@ module DangerPackwerk
           expect(dangerfile.status_report[:errors]).to be_empty
           actual_markdowns = dangerfile.status_report[:markdowns]
           expect(actual_markdowns.count).to eq 0
+        end
+      end
+
+      context 'a deprecated_refrences.yml file is modified to add a new violation against a new constant in an existing file' do
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                "OtherPackClass2":
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "OtherPackClass":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class.rb
+          YML
+        end
+
+        it 'calls the before comment input proc' do
+          expect(slack_notifier).to receive(:notify_slack).with(
+            { dependency: { minus: 0, plus: 1 }, privacy: { minus: 0, plus: 1 } },
+            ['packs/some_pack/deprecated_references.yml']
+          )
+
+          subject
+        end
+
+        it 'displays a markdown with a reasonable message' do
+          subject
+          expect(dangerfile.status_report[:warnings]).to be_empty
+          expect(dangerfile.status_report[:errors]).to be_empty
+          actual_markdowns = dangerfile.status_report[:markdowns]
+          expect(actual_markdowns.count).to eq 1
+          actual_markdown = actual_markdowns.first
+          expected = <<~EXPECTED
+            Hi! It looks like the pack defining `OtherPackClass2` considers this private API, and it's also not in the referencing pack's list of dependencies.
+            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
+          EXPECTED
+
+          expect(actual_markdown.message).to eq expected
+          expect(actual_markdown.line).to eq 8
+          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
+          expect(actual_markdown.type).to eq :markdown
+        end
+      end
+
+      context 'a deprecated_refrences.yml file is modified to add a new reference against an existing constant in an existing file' do
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                  - packs/some_pack/some_other_class.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "OtherPackClass":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class.rb
+          YML
+        end
+
+        it 'calls the before comment input proc' do
+          expect(slack_notifier).to receive(:notify_slack).with(
+            { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 1 } },
+            ['packs/some_pack/deprecated_references.yml']
+          )
+
+          subject
+        end
+
+        it 'displays a markdown with a reasonable message' do
+          subject
+          expect(dangerfile.status_report[:warnings]).to be_empty
+          expect(dangerfile.status_report[:errors]).to be_empty
+          actual_markdowns = dangerfile.status_report[:markdowns]
+          expect(actual_markdowns.count).to eq 1
+          actual_markdown = actual_markdowns.first
+          expected = <<~EXPECTED
+            Hi! It looks like the pack defining `OtherPackClass` considers this private API.
+            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+          EXPECTED
+
+          expect(actual_markdown.message).to eq expected
+          expect(actual_markdown.line).to eq 3
+          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
+          expect(actual_markdown.type).to eq :markdown
+        end
+      end
+
+      context 'a deprecated_refrences.yml file is modified to add a reference (that already exists in `deprecated_references.yml`) against an existing constant in an existing file' do
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                  - packs/some_pack/some_other_class.rb
+                "SomeOtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                  - packs/some_pack/some_other_class.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "OtherPackClass":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class.rb
+                - packs/some_pack/some_other_class.rb
+              "SomeOtherPackClass":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class.rb
+          YML
+        end
+
+        it 'calls the before comment input proc' do
+          expect(slack_notifier).to receive(:notify_slack).with(
+            { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 1 } },
+            ['packs/some_pack/deprecated_references.yml']
+          )
+
+          subject
+        end
+
+        it 'displays a markdown with a reasonable message' do
+          subject
+          expect(dangerfile.status_report[:warnings]).to be_empty
+          expect(dangerfile.status_report[:errors]).to be_empty
+          actual_markdowns = dangerfile.status_report[:markdowns]
+          expect(actual_markdowns.count).to eq 1
+          actual_markdown = actual_markdowns.first
+          expected = <<~EXPECTED
+            Hi! It looks like the pack defining `SomeOtherPackClass` considers this private API.
+            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+          EXPECTED
+
+          expect(actual_markdown.message).to eq expected
+          expect(actual_markdown.line).to eq 9
+          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
+          expect(actual_markdown.type).to eq :markdown
         end
       end
 
