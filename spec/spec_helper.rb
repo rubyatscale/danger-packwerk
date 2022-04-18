@@ -38,7 +38,7 @@ end
 
 require 'pry'
 require_relative 'support/danger_plugin'
-require_relative 'support/contain_inline_markdown'
+require_relative 'support/custom_matchers'
 require 'danger-packwerk'
 
 RSpec.configure do |config|

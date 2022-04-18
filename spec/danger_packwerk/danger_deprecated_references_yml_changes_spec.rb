@@ -42,9 +42,7 @@ module DangerPackwerk
 
         it 'does not send any messages' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          expect(dangerfile.status_report[:messages]).to be_empty
+          expect(dangerfile).to produce_no_danger_messages
         end
 
         it 'calls notify sslack' do
@@ -81,20 +79,23 @@ module DangerPackwerk
         context 'default formatter is used' do
           it 'displays a markdown with a reasonable message' do
             subject
-            expect(dangerfile.status_report[:warnings]).to be_empty
-            expect(dangerfile.status_report[:errors]).to be_empty
-            actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 1
-            actual_markdown = actual_markdowns.first
-            expected = <<~EXPECTED
-              Hi! It looks like the pack defining `OtherPackClass` considers this private API, and it's also not in the referencing pack's list of dependencies.
-              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
-            EXPECTED
 
-            expect(actual_markdown.message).to eq expected
-            expect(actual_markdown.line).to eq 3
-            expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
-            expect(actual_markdown.type).to eq :markdown
+            expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+              <<~EXPECTED
+                ---
+                packs/some_other_pack:
+                  "OtherPackClass":
+                ==================== DANGER_START
+                Hi! It looks like the pack defining `OtherPackClass` considers this private API, and it's also not in the referencing pack's list of dependencies.
+                We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
+                ==================== DANGER_END
+                    violations:
+                    - privacy
+                    - dependency
+                    files:
+                    - packs/some_pack/some_class.rb
+              EXPECTED
+            ).and_nothing_else
           end
         end
 
@@ -121,35 +122,25 @@ module DangerPackwerk
 
           it 'displays a markdown using the passed in offenses formatter' do
             subject
-            expect(dangerfile.status_report[:warnings]).to be_empty
-            expect(dangerfile.status_report[:errors]).to be_empty
-            actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 1
-            actual_markdown = actual_markdowns.first
-            expected = <<~EXPECTED
-              There are 2 new violations,
-              with class_names ["OtherPackClass"],
-              with to_package_names ["packs/some_other_pack"],
-              with types ["dependency", "privacy"],
-            EXPECTED
-
-            expect(actual_markdown.message).to eq expected
-            expect(actual_markdown.line).to eq 3
-            expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
-            expect(actual_markdown.type).to eq :markdown
 
             expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
-              <<~MARKDOWN
-              ---
-              packs/some_other_pack:
-                "OtherPackClass":
-                  violations:
-                  - privacy
-                  - dependency
-                  files:
-                  - packs/some_pack/some_class.rb
-              MARKDOWN
-            )
+              <<~EXPECTED
+                ---
+                packs/some_other_pack:
+                  "OtherPackClass":
+                ==================== DANGER_START
+                There are 2 new violations,
+                with class_names ["OtherPackClass"],
+                with to_package_names ["packs/some_other_pack"],
+                with types ["dependency", "privacy"],
+                ==================== DANGER_END
+                    violations:
+                    - privacy
+                    - dependency
+                    files:
+                    - packs/some_pack/some_class.rb
+              EXPECTED
+            ).and_nothing_else
           end
         end
       end
@@ -180,10 +171,7 @@ module DangerPackwerk
 
         it 'does not display a markdown message' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          actual_markdowns = dangerfile.status_report[:markdowns]
-          expect(actual_markdowns.count).to eq 0
+          expect(dangerfile).to produce_no_danger_messages
         end
       end
 
@@ -231,10 +219,7 @@ module DangerPackwerk
 
         it 'does not display a markdown message' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          actual_markdowns = dangerfile.status_report[:markdowns]
-          expect(actual_markdowns.count).to eq 0
+          expect(dangerfile).to produce_no_danger_messages
         end
       end
 
@@ -282,20 +267,28 @@ module DangerPackwerk
 
         it 'displays a markdown with a reasonable message' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          actual_markdowns = dangerfile.status_report[:markdowns]
-          expect(actual_markdowns.count).to eq 1
-          actual_markdown = actual_markdowns.first
-          expected = <<~EXPECTED
-            Hi! It looks like the pack defining `OtherPackClass2` considers this private API, and it's also not in the referencing pack's list of dependencies.
-            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
-          EXPECTED
 
-          expect(actual_markdown.message).to eq expected
-          expect(actual_markdown.line).to eq 8
-          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
-          expect(actual_markdown.type).to eq :markdown
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                "OtherPackClass2":
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass2` considers this private API, and it's also not in the referencing pack's list of dependencies.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
+              ==================== DANGER_END
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class.rb
+            EXPECTED
+          ).and_nothing_else
         end
       end
 
@@ -338,20 +331,23 @@ module DangerPackwerk
 
         it 'displays a markdown with a reasonable message' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          actual_markdowns = dangerfile.status_report[:markdowns]
-          expect(actual_markdowns.count).to eq 1
-          actual_markdown = actual_markdowns.first
-          expected = <<~EXPECTED
-            Hi! It looks like the pack defining `OtherPackClass` considers this private API.
-            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
-          EXPECTED
 
-          expect(actual_markdown.message).to eq expected
-          expect(actual_markdown.line).to eq 3
-          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
-          expect(actual_markdown.type).to eq :markdown
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` considers this private API.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                  - packs/some_pack/some_other_class.rb
+            EXPECTED
+          ).and_nothing_else
         end
       end
 
@@ -406,20 +402,29 @@ module DangerPackwerk
 
         it 'displays a markdown with a reasonable message' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          actual_markdowns = dangerfile.status_report[:markdowns]
-          expect(actual_markdowns.count).to eq 1
-          actual_markdown = actual_markdowns.first
-          expected = <<~EXPECTED
-            Hi! It looks like the pack defining `SomeOtherPackClass` considers this private API.
-            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
-          EXPECTED
 
-          expect(actual_markdown.message).to eq expected
-          expect(actual_markdown.line).to eq 9
-          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
-          expect(actual_markdown.type).to eq :markdown
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                  - packs/some_pack/some_other_class.rb
+                "SomeOtherPackClass":
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `SomeOtherPackClass` considers this private API.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                  - packs/some_pack/some_other_class.rb
+            EXPECTED
+          ).and_nothing_else
         end
       end
 
@@ -480,20 +485,23 @@ module DangerPackwerk
 
         it 'displays a markdown with a reasonable message' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          actual_markdowns = dangerfile.status_report[:markdowns]
-          expect(actual_markdowns.count).to eq 1
-          actual_markdown = actual_markdowns.first
-          expected = <<~EXPECTED
-            Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
-            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
-          EXPECTED
 
-          expect(actual_markdown.message).to eq expected
-          expect(actual_markdown.line).to eq 3
-          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
-          expect(actual_markdown.type).to eq :markdown
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class.rb
+            EXPECTED
+          ).and_nothing_else
         end
       end
 
@@ -584,20 +592,37 @@ module DangerPackwerk
 
         it 'displays a markdown with a reasonable message' do
           subject
-          expect(dangerfile.status_report[:warnings]).to be_empty
-          expect(dangerfile.status_report[:errors]).to be_empty
-          actual_markdowns = dangerfile.status_report[:markdowns]
-          expect(actual_markdowns.count).to eq 1
-          actual_markdown = actual_markdowns.first
-          expected = <<~EXPECTED
-            Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
-            We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
-          EXPECTED
 
-          expect(actual_markdown.message).to eq expected
-          expect(actual_markdown.line).to eq 3
-          expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
-          expect(actual_markdown.type).to eq :markdown
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` is not in the referencing pack's list of dependencies.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
+              ==================== DANGER_END
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class1.rb
+                  - packs/some_pack/some_class2.rb
+                  - packs/some_pack/some_class3.rb
+                  - packs/some_pack/some_class4.rb
+                  - packs/some_pack/some_class5.rb
+                  - packs/some_pack/some_class6.rb
+                  - packs/some_pack/some_class7.rb
+                  - packs/some_pack/some_class8.rb
+                  - packs/some_pack/some_class9.rb
+                  - packs/some_pack/some_class10.rb
+                  - packs/some_pack/some_class11.rb
+                  - packs/some_pack/some_class12.rb
+                  - packs/some_pack/some_class13.rb
+                  - packs/some_pack/some_class14.rb
+                  - packs/some_pack/some_class15.rb
+            EXPECTED
+          ).and_nothing_else
         end
       end
     end
