@@ -28,8 +28,7 @@ module DangerPackwerk
         else # violations.any?(&:privacy?)
           <<~MESSAGE
             Hi! It looks like the pack defining `#{constant_name}` considers this private API.
-            #{disclaimer}
-            #{request_to_add_context}
+            #{disclaimer}#{request_to_add_context}
           MESSAGE
         end
       end
