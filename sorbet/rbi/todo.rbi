@@ -1,1 +1,3 @@
-module ::RSpec; end
+module ::RSpec
+  module Matchers; end
+end

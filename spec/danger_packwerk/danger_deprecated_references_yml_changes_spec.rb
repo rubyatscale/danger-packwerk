@@ -137,6 +137,19 @@ module DangerPackwerk
             expect(actual_markdown.line).to eq 3
             expect(actual_markdown.file).to eq 'packs/some_pack/deprecated_references.yml'
             expect(actual_markdown.type).to eq :markdown
+
+            expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+              <<~MARKDOWN
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class.rb
+              MARKDOWN
+            )
           end
         end
       end
