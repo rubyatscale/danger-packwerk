@@ -21,8 +21,19 @@ module DangerPackwerk
         )
       end
 
+      let(:some_pack_deprecated_references_before) { nil }
+
       before do
         allow(danger_deprecated_references_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/deprecated_references.yml' => double(patch: 'some_fancy_patch') })
+
+        # After we make the system call to apply the inverse of the deletion patch, we should expect the file
+        # to be present again, so we write it here as a means of stubbing out that call to `git`.
+        allow(Open3).to receive(:capture3) do |system_call|
+          expect(system_call).to include('git apply --reverse ')
+          patch_file = system_call.gsub('git apply --reverse ', '')
+          expect(File.read(patch_file)).to eq "some_fancy_patch\n"
+          some_pack_deprecated_references_before
+        end
       end
 
       context 'when no deprecated_references.yml files have been added or modified' do
@@ -133,25 +144,17 @@ module DangerPackwerk
 
         context 'a deprecated_refrences.yml file is deleted (i.e. a pack has all violations removed)' do
           let(:deleted_files) { ['packs/some_pack/deprecated_references.yml'] }
-
-          before do
-            expect(Open3).to receive(:capture3) do |system_call|
-              expect(system_call).to include('git apply --reverse ')
-              patch_file = system_call.gsub('git apply --reverse ', '')
-              expect(File.read(patch_file)).to eq "some_fancy_patch\n"
-              # After we make the system call to apply the inverse of the deletion patch, we should expect the file
-              # to be present again, so we write it here as a means of stubbing out that call to `git`.
-              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-                ---
-                packs/some_other_pack:
-                  "OtherPackClass":
-                    violations:
-                    - dependency
-                    - privacy
-                    files:
-                    - packs/some_pack/some_class.rb
-              YML
-            end
+          let(:some_pack_deprecated_references_before) do
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - dependency
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+            YML
           end
 
           it 'calls the before comment input proc' do
@@ -187,29 +190,22 @@ module DangerPackwerk
             [file.to_s]
           end
 
-          before do
-            expect(Open3).to receive(:capture3) do |system_call|
-              expect(system_call).to include('git apply --reverse ')
-              patch_file = system_call.gsub('git apply --reverse ', '')
-              expect(File.read(patch_file)).to eq "some_fancy_patch\n"
-              # After we make the system call to apply the inverse of the deletion patch, we should expect the file
-              # to be present again, so we write it here as a means of stubbing out that call to `git`.
-              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-                ---
-                packs/some_other_pack:
-                  "OtherPackClass":
-                    violations:
-                    - privacy
-                    files:
-                    - packs/some_pack/some_class.rb
-                  "OtherPackClass2":
-                    violations:
-                    - dependency
-                    - privacy
-                    files:
-                    - packs/some_pack/some_class2.rb
-              YML
-            end
+          let(:some_pack_deprecated_references_before) do
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                "OtherPackClass2":
+                  violations:
+                  - dependency
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class2.rb
+            YML
           end
 
           it 'calls the before comment input proc' do
@@ -246,41 +242,34 @@ module DangerPackwerk
             [file.to_s]
           end
 
-          before do
-            expect(Open3).to receive(:capture3) do |system_call|
-              expect(system_call).to include('git apply --reverse ')
-              patch_file = system_call.gsub('git apply --reverse ', '')
-              expect(File.read(patch_file)).to eq "some_fancy_patch\n"
-              # After we make the system call to apply the inverse of the deletion patch, we should expect the file
-              # to be present again, so we write it here as a means of stubbing out that call to `git`.
-              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-                ---
-                packs/some_other_pack:
-                  "OtherPackClass":
-                    violations:
-                    - privacy
-                    files:
-                    - packs/some_pack/some_class.rb
-                    - packs/some_pack/some_class2.rb
-                    - packs/some_pack/some_class3.rb
-                    - packs/some_pack/some_class4.rb
-                    - packs/some_pack/some_class5.rb
-                    - packs/some_pack/some_class6.rb
-                    - packs/some_pack/some_class7.rb
-                  "OtherPackClass2":
-                    violations:
-                    - dependency
-                    - privacy
-                    files:
-                    - packs/some_pack/some_class2.rb
-                    - packs/some_pack/some_class3.rb
-                    - packs/some_pack/some_class4.rb
-                    - packs/some_pack/some_class5.rb
-                    - packs/some_pack/some_class6.rb
-                    - packs/some_pack/some_class7.rb
+          let(:some_pack_deprecated_references_before) do
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class.rb
+                  - packs/some_pack/some_class2.rb
+                  - packs/some_pack/some_class3.rb
+                  - packs/some_pack/some_class4.rb
+                  - packs/some_pack/some_class5.rb
+                  - packs/some_pack/some_class6.rb
+                  - packs/some_pack/some_class7.rb
+                "OtherPackClass2":
+                  violations:
+                  - dependency
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class2.rb
+                  - packs/some_pack/some_class3.rb
+                  - packs/some_pack/some_class4.rb
+                  - packs/some_pack/some_class5.rb
+                  - packs/some_pack/some_class6.rb
+                  - packs/some_pack/some_class7.rb
 
-              YML
-            end
+            YML
           end
 
           it 'calls the before comment input proc' do
@@ -341,57 +330,50 @@ module DangerPackwerk
             [file.to_s]
           end
 
-          before do
-            expect(Open3).to receive(:capture3) do |system_call|
-              expect(system_call).to include('git apply --reverse ')
-              patch_file = system_call.gsub('git apply --reverse ', '')
-              expect(File.read(patch_file)).to eq "some_fancy_patch\n"
-              # After we make the system call to apply the inverse of the deletion patch, we should expect the file
-              # to be present again, so we write it here as a means of stubbing out that call to `git`.
-              write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
-                ---
-                packs/some_other_pack:
-                  "OtherPackClass":
-                    violations:
-                    - privacy
-                    files:
-                    - packs/some_pack/some_class1.rb
-                    - packs/some_pack/some_class2.rb
-                    - packs/some_pack/some_class3.rb
-                    - packs/some_pack/some_class4.rb
-                    - packs/some_pack/some_class5.rb
-                    - packs/some_pack/some_class6.rb
-                    - packs/some_pack/some_class7.rb
-                    - packs/some_pack/some_class8.rb
-                    - packs/some_pack/some_class9.rb
-                    - packs/some_pack/some_class10.rb
-                    - packs/some_pack/some_class11.rb
-                    - packs/some_pack/some_class12.rb
-                    - packs/some_pack/some_class13.rb
-                    - packs/some_pack/some_class14.rb
-                    - packs/some_pack/some_class15.rb
-                  "AnotherPackClass":
-                    violations:
-                    - privacy
-                    - dependency
-                    files:
-                    - packs/some_pack/some_other_class1.rb
-                    - packs/some_pack/some_other_class2.rb
-                    - packs/some_pack/some_other_class3.rb
-                    - packs/some_pack/some_other_class4.rb
-                    - packs/some_pack/some_other_class5.rb
-                    - packs/some_pack/some_other_class6.rb
-                    - packs/some_pack/some_other_class7.rb
-                    - packs/some_pack/some_other_class8.rb
-                    - packs/some_pack/some_other_class9.rb
-                    - packs/some_pack/some_other_class10.rb
-                    - packs/some_pack/some_other_class11.rb
-                    - packs/some_pack/some_other_class12.rb
-                    - packs/some_pack/some_other_class13.rb
-                    - packs/some_pack/some_other_class14.rb
-                    - packs/some_pack/some_other_class15.rb
-              YML
-            end
+          let(:some_pack_deprecated_references_before) do
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class1.rb
+                  - packs/some_pack/some_class2.rb
+                  - packs/some_pack/some_class3.rb
+                  - packs/some_pack/some_class4.rb
+                  - packs/some_pack/some_class5.rb
+                  - packs/some_pack/some_class6.rb
+                  - packs/some_pack/some_class7.rb
+                  - packs/some_pack/some_class8.rb
+                  - packs/some_pack/some_class9.rb
+                  - packs/some_pack/some_class10.rb
+                  - packs/some_pack/some_class11.rb
+                  - packs/some_pack/some_class12.rb
+                  - packs/some_pack/some_class13.rb
+                  - packs/some_pack/some_class14.rb
+                  - packs/some_pack/some_class15.rb
+                "AnotherPackClass":
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_other_class1.rb
+                  - packs/some_pack/some_other_class2.rb
+                  - packs/some_pack/some_other_class3.rb
+                  - packs/some_pack/some_other_class4.rb
+                  - packs/some_pack/some_other_class5.rb
+                  - packs/some_pack/some_other_class6.rb
+                  - packs/some_pack/some_other_class7.rb
+                  - packs/some_pack/some_other_class8.rb
+                  - packs/some_pack/some_other_class9.rb
+                  - packs/some_pack/some_other_class10.rb
+                  - packs/some_pack/some_other_class11.rb
+                  - packs/some_pack/some_other_class12.rb
+                  - packs/some_pack/some_other_class13.rb
+                  - packs/some_pack/some_other_class14.rb
+                  - packs/some_pack/some_other_class15.rb
+            YML
           end
 
           it 'calls the before comment input proc' do
