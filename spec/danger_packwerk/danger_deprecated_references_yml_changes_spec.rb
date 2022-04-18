@@ -85,15 +85,15 @@ module DangerPackwerk
                 ---
                 packs/some_other_pack:
                   "OtherPackClass":
-                ==================== DANGER_START
-                Hi! It looks like the pack defining `OtherPackClass` considers this private API, and it's also not in the referencing pack's list of dependencies.
-                We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
-                ==================== DANGER_END
                     violations:
                     - privacy
                     - dependency
                     files:
                     - packs/some_pack/some_class.rb
+                ==================== DANGER_START
+                Hi! It looks like the pack defining `OtherPackClass` considers this private API, and it's also not in the referencing pack's list of dependencies.
+                We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
+                ==================== DANGER_END
               EXPECTED
             ).and_nothing_else
           end
@@ -128,17 +128,17 @@ module DangerPackwerk
                 ---
                 packs/some_other_pack:
                   "OtherPackClass":
+                    violations:
+                    - privacy
+                    - dependency
+                    files:
+                    - packs/some_pack/some_class.rb
                 ==================== DANGER_START
                 There are 2 new violations,
                 with class_names ["OtherPackClass"],
                 with to_package_names ["packs/some_other_pack"],
                 with types ["dependency", "privacy"],
                 ==================== DANGER_END
-                    violations:
-                    - privacy
-                    - dependency
-                    files:
-                    - packs/some_pack/some_class.rb
               EXPECTED
             ).and_nothing_else
           end
@@ -278,15 +278,15 @@ module DangerPackwerk
                   files:
                   - packs/some_pack/some_class.rb
                 "OtherPackClass2":
-              ==================== DANGER_START
-              Hi! It looks like the pack defining `OtherPackClass2` considers this private API, and it's also not in the referencing pack's list of dependencies.
-              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
-              ==================== DANGER_END
                   violations:
                   - privacy
                   - dependency
                   files:
                   - packs/some_pack/some_class.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass2` considers this private API, and it's also not in the referencing pack's list of dependencies.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add these violations?
+              ==================== DANGER_END
             EXPECTED
           ).and_nothing_else
         end

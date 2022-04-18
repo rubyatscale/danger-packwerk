@@ -38,7 +38,6 @@ module DangerPackwerk
     const :file, String
     const :to_package_name, String
     const :type, String
-    const :class_name_location, Location
     const :file_location, Location
 
     sig { params(deprecated_references_yml: String).returns(T::Array[BasicReferenceOffense]) }
@@ -85,14 +84,12 @@ module DangerPackwerk
           raise "Unable to find reference to violation #{debug_info} in #{deprecated_references_yml}"
         end
 
-        # We add one to the line number since `each_with_index` is zero-based indexed but Github line numbers are one-based indexed
-        class_name_location = Location.new(file: deprecated_references_yml, line_number: class_name_line_number + 1)
-
         violation.files.map do |file|
           file_line_numbers = file_reference_to_line_number_index.fetch(file, [])
           file_line_number = file_line_numbers.select { |index| index > class_name_line_number }.min
           raise "Unable to find reference to violation #{{ file: file, to_package_name: violation.to_package_name, type: violation.type }} in #{deprecated_references_yml}" if file_line_number.nil?
 
+          # We add one to the line number since `each_with_index` is zero-based indexed but Github line numbers are one-based indexed
           file_location = Location.new(file: deprecated_references_yml, line_number: file_line_number + 1)
 
           BasicReferenceOffense.new(
@@ -100,7 +97,6 @@ module DangerPackwerk
             file: file,
             to_package_name: violation.to_package_name,
             type: violation.type,
-            class_name_location: class_name_location,
             file_location: file_location
           )
         end
