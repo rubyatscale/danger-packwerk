@@ -351,19 +351,19 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to add a reference (that already exists in `deprecated_references.yml`) against an existing constant in an existing file' do
+      context 'a deprecated_refrences.yml file is modified to add another violation on a file with an existing violation' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
-                "OtherPackClass":
+                "ABCClass":
                   violations:
                   - privacy
                   files:
                   - packs/some_pack/some_class.rb
                   - packs/some_pack/some_other_class.rb
-                "SomeOtherPackClass":
+                "XYZModule":
                   violations:
                   - privacy
                   files:
@@ -377,13 +377,13 @@ module DangerPackwerk
           write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
-              "OtherPackClass":
+              "ABCClass":
                 violations:
                 - privacy
                 files:
                 - packs/some_pack/some_class.rb
                 - packs/some_pack/some_other_class.rb
-              "SomeOtherPackClass":
+              "XYZModule":
                 violations:
                 - privacy
                 files:
@@ -407,20 +407,20 @@ module DangerPackwerk
             <<~EXPECTED
               ---
               packs/some_other_pack:
-                "OtherPackClass":
+                "ABCClass":
                   violations:
                   - privacy
                   files:
                   - packs/some_pack/some_class.rb
                   - packs/some_pack/some_other_class.rb
-                "SomeOtherPackClass":
+                "XYZModule":
                   violations:
                   - privacy
                   files:
                   - packs/some_pack/some_class.rb
                   - packs/some_pack/some_other_class.rb
               ==================== DANGER_START
-              Hi! It looks like the pack defining `SomeOtherPackClass` considers this private API.
+              Hi! It looks like the pack defining `XYZModule` considers this private API.
               We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
               ==================== DANGER_END
             EXPECTED
