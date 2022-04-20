@@ -44,8 +44,11 @@ module DangerPackwerk
       )
 
       current_comment_count = 0
-      violation_diff.added_violations.group_by(&:location).each do |location, violations|
+
+      violation_diff.added_violations.group_by(&:class_name).each do |_class_name, violations|
         break if current_comment_count >= max_comments
+
+        location = T.must(violations.first).file_location
 
         markdown(
           added_offenses_formatter.call(violations),
@@ -71,13 +74,13 @@ module DangerPackwerk
       git.deleted_files.grep(DEPRECATED_REFERENCES_PATTERN).each do |deleted_deprecated_references_yml_file|
         # Since the file is deleted, we know on the HEAD commit there are no violations related to this pack,
         # and that all violations from this file are deleted
-        removed_violations += get_violations_before_patch_for(deleted_deprecated_references_yml_file)
+        deleted_violations = get_violations_before_patch_for(deleted_deprecated_references_yml_file)
+        removed_violations += deleted_violations
       end
 
       git.modified_files.grep(DEPRECATED_REFERENCES_PATTERN).each do |modified_deprecated_references_yml_file|
         head_commit_violations = BasicReferenceOffense.from(modified_deprecated_references_yml_file)
         base_commit_violations = get_violations_before_patch_for(modified_deprecated_references_yml_file)
-
         added_violations += head_commit_violations - base_commit_violations
         removed_violations += base_commit_violations - head_commit_violations
       end
