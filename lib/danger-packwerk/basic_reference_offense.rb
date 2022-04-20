@@ -78,7 +78,15 @@ module DangerPackwerk
         # we need to group them. That is -- if `MyPrivateConstant` is both a dependency and a privacy violation AND it occurs in 10 files, that would represent 20 violations.
         # Therefore we will group all of those 20 into one message to the user rather than providing 20 messages.
         #
-        _line, class_name_line_number = deprecated_references_yml_pathname.readlines.each_with_index.find { |line, _index| line.include?(violation.class_name) }
+        _line, class_name_line_number = deprecated_references_yml_pathname.readlines.each_with_index.find do |line, _index|
+          # If you have a class `::MyClass`, then you can get a false match if another constant in the file
+          # is named `MyOtherClass::MyClassThing`. Therefore we include quotes in our match to ensure that we match
+          # the constant and only the constant. Right now `packwerk` `deprecated_references.yml` files always use
+          # double quotes, so we check for that only. If the public API ever changes, this may need to change.
+          class_name_with_quote_boundaries = "\"#{violation.class_name}\":"
+          line.include?(class_name_with_quote_boundaries)
+        end
+
         if class_name_line_number.nil?
           debug_info = { class_name: violation.class_name, to_package_name: violation.to_package_name, type: violation.type }
           raise "Unable to find reference to violation #{debug_info} in #{deprecated_references_yml}"
