@@ -84,8 +84,6 @@ module DangerPackwerk
           # the constant and only the constant.
           # Right now `packwerk` `deprecated_references.yml` files typically use double quotes, but sometimes folks linters change this to single quotes.
           # To be defensive, we match against either.
-          # require 'pry'
-          # binding.pry if line.include?(violation.class_name)
           class_name_with_quote_boundaries = /["|']#{violation.class_name}["|']:/
           line.match?(class_name_with_quote_boundaries)
         end
