@@ -702,6 +702,65 @@ module DangerPackwerk
           ).and_nothing_else
         end
       end
+
+      context 'a deprecated_refrences.yml file using single quotes is modified' do
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                'OtherPackClass':
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class1.rb
+                  - packs/some_pack/some_class2.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              'OtherPackClass':
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class1.rb
+          YML
+        end
+
+        it 'calls the before comment input proc' do
+          expect(slack_notifier).to receive(:notify_slack).with(
+            { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 1 } },
+            ['packs/some_pack/deprecated_references.yml']
+          )
+
+          subject
+        end
+
+        it 'displays a markdown with a reasonable message' do
+          subject
+
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                'OtherPackClass':
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class1.rb
+                  - packs/some_pack/some_class2.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` considers this private API.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
+            EXPECTED
+          ).and_nothing_else
+        end
+      end
     end
   end
 end
