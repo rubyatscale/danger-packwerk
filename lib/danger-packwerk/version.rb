@@ -2,5 +2,5 @@
 # frozen_string_literal: true
 
 module DangerPackwerk
-  VERSION = '0.1.3'
+  VERSION = '0.2.3'
 end
