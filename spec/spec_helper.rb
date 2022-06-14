@@ -22,7 +22,7 @@ module DangerHelpers
   # running a PR on Buildkite
   def testing_env
     {
-      'BUILDKITE_REPO' => 'git@github.com:bigrails/danger-packwerk.git',
+      'BUILDKITE_REPO' => 'git@github.com:rubyatscale/danger-packwerk.git',
       'BUILDKITE' => true,
       'DANGER_GITHUB_API_TOKEN' => 'some_token',
       'DANGER_GITHUB_BEARER_TOKEN' => 'some_other_token'
