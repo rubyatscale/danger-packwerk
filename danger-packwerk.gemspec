@@ -9,13 +9,13 @@ Gem::Specification.new do |spec|
   spec.email         = ['dev@gusto.com']
   spec.description   = 'Danger plugin for packwerk.'
   spec.summary       = 'Danger plugin for packwerk.'
-  spec.homepage      = 'https://github.com/bigrails/danger-packwerk'
+  spec.homepage      = 'https://github.com/rubyatscale/danger-packwerk'
   spec.license       = 'MIT'
 
   if spec.respond_to?(:metadata)
     spec.metadata['homepage_uri'] = spec.homepage
-    spec.metadata['source_code_uri'] = 'https://github.com/bigrails/danger-packwerk'
-    spec.metadata['changelog_uri'] = 'https://github.com/bigrails/danger-packwerk/releases'
+    spec.metadata['source_code_uri'] = 'https://github.com/rubyatscale/danger-packwerk'
+    spec.metadata['changelog_uri'] = 'https://github.com/rubyatscale/danger-packwerk/releases'
   end
 
   if spec.respond_to?(:metadata)

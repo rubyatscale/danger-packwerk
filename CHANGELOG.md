@@ -1,1 +1,1 @@
-See https://github.com/bigrails/danger-packwerk/releases
+See https://github.com/rubyatscale/danger-packwerk/releases
