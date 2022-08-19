@@ -23,6 +23,15 @@ module DangerPackwerk
     DEFAULT_FAIL = false
     DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
 
+    class CommentGroupingStrategy < ::T::Enum
+      enums do
+        PerConstantPerLocation = new
+        PerConstantPerPack = new
+      end
+    end
+
+    PerConstantPerPackGrouping = CommentGroupingStrategy::PerConstantPerPack
+
     sig do
       params(
         max_comments: Integer,
