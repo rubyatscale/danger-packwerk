@@ -338,6 +338,12 @@ module DangerPackwerk
         end
 
         context 'with grouping per constant per pack' do
+          let(:run_packwerk_check) do
+            packwerk.check(
+              grouping_strategy: DangerPackwerk::PerConstantPerPackGrouping
+            )
+          end
+
           context 'on the same line' do
             let(:reference) do
               sorbet_double(
@@ -367,7 +373,7 @@ module DangerPackwerk
             end
 
             it 'leaves one comment' do
-              packwerk.check
+              run_packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
@@ -408,8 +414,9 @@ module DangerPackwerk
               ]
             end
 
-            xit 'leaves one comment' do
-              packwerk.check
+            it 'leaves one comment' do
+              pending
+              run_packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
@@ -450,8 +457,9 @@ module DangerPackwerk
               ]
             end
 
-            xit 'leaves one comment' do
-              packwerk.check
+            it 'leaves one comment' do
+              pending
+              run_packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
@@ -493,7 +501,7 @@ module DangerPackwerk
             end
 
             it 'leaves a comment for each violation' do
-              packwerk.check
+              run_packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
 
