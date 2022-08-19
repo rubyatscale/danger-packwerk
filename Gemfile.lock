@@ -4,6 +4,7 @@ PATH
     danger-packwerk (0.2.3)
       danger-plugin-api (~> 1.0)
       packwerk
+      parse_packwerk
       sorbet-runtime
 
 GEM
@@ -123,6 +124,8 @@ GEM
       parser
       sorbet-runtime
     parallel (1.22.1)
+    parse_packwerk (0.12.0)
+      sorbet-runtime
     parser (3.1.1.0)
       ast (~> 2.4.1)
     pry (0.14.1)

@@ -3,6 +3,7 @@
 
 require 'danger'
 require 'packwerk'
+require 'parse_packwerk'
 require 'sorbet-runtime'
 require 'danger-packwerk/packwerk_wrapper'
 
@@ -23,13 +24,23 @@ module DangerPackwerk
     DEFAULT_FAIL = false
     DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
 
+    class CommentGroupingStrategy < ::T::Enum
+      enums do
+        PerConstantPerLocation = new
+        PerConstantPerPack = new
+      end
+    end
+
+    PerConstantPerPackGrouping = CommentGroupingStrategy::PerConstantPerPack
+
     sig do
       params(
         max_comments: Integer,
         offenses_formatter: OffensesFormatter,
         fail_build: T::Boolean,
         failure_message: String,
-        on_failure: OnFailure
+        on_failure: OnFailure,
+        grouping_strategy: CommentGroupingStrategy
       ).void
     end
     def check(
@@ -37,7 +48,8 @@ module DangerPackwerk
       offenses_formatter: DEFAULT_OFFENSES_FORMATTER,
       fail_build: DEFAULT_FAIL,
       failure_message: DEFAULT_FAILURE_MESSAGE,
-      on_failure: DEFAULT_ON_FAILURE
+      on_failure: DEFAULT_ON_FAILURE,
+      grouping_strategy: CommentGroupingStrategy::PerConstantPerLocation
     )
       # This is important because by default, Danger will leave a concantenated list of all its messages if it can't find a commentable place in the
       # diff to leave its message. This is an especially bad UX because it will be a huge wall of text not connected to the source of the issue.
@@ -75,11 +87,21 @@ module DangerPackwerk
       # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation
       # they are (privacy or dependency). We put privacy and dependency violation messages in the same comment since they would occur on the same line.
       packwerk_reference_offenses.group_by do |packwerk_reference_offense|
-        [
-          packwerk_reference_offense.reference.constant.name,
-          packwerk_reference_offense.location.line,
-          packwerk_reference_offense.reference.relative_path
-        ]
+        case grouping_strategy
+        when CommentGroupingStrategy::PerConstantPerLocation
+          [
+            packwerk_reference_offense.reference.constant.name,
+            packwerk_reference_offense.location.line,
+            packwerk_reference_offense.reference.relative_path
+          ]
+        when CommentGroupingStrategy::PerConstantPerPack
+          [
+            packwerk_reference_offense.reference.constant.name,
+            ParsePackwerk.package_from_path(packwerk_reference_offense.reference.relative_path)
+          ]
+        else
+          T.absurd(grouping_strategy)
+        end
       end.each do |_group, unique_packwerk_reference_offenses|
         break if current_comment_count >= max_comments
 

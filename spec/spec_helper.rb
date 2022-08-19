@@ -55,6 +55,10 @@ RSpec.configure do |config|
 
   config.include DangerHelpers
 
+  config.before do |_example|
+    ParsePackwerk.bust_cache!
+  end
+
   config.around do |example|
     prefix = [File.basename($0), Process.pid].join('-') # rubocop:disable Style/SpecialGlobalVars
     tmpdir = Dir.mktmpdir(prefix)

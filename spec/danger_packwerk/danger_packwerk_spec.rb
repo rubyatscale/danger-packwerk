@@ -10,6 +10,10 @@ module DangerPackwerk
       let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
       before do
+        write_file('package.yml', <<~YML)
+          enforce_dependencies: true
+          enforce_privacy: true
+        YML
         allow_any_instance_of(Packwerk::Cli).to receive(:execute_command).with(['check', *files_for_packwerk])
         allow_any_instance_of(PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
       end
@@ -143,195 +147,392 @@ module DangerPackwerk
       end
 
       context 'when there are violations on the same constant' do
-        context 'on the same line' do
-          let(:reference) do
-            sorbet_double(
-              Packwerk::Reference,
-              relative_path: 'packs/referencing_pack/some_file.rb',
-              constant: constant
+        context 'with default (per constant per line)' do
+          context 'on the same line' do
+            let(:reference) do
+              sorbet_double(
+                Packwerk::Reference,
+                relative_path: 'packs/referencing_pack/some_file.rb',
+                constant: constant
+              )
+            end
+
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 15)
+                ),
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Dependency,
+                  message: 'Vanilla message about dependency violations',
+                  location: Packwerk::Node::Location.new(12, 15)
+                )
+              ]
+            end
+
+            it 'leaves one comment' do
+              packwerk.check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about dependency violations"
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
+          end
+
+          context 'within the same file' do
+            let(:reference) do
+              sorbet_double(
+                Packwerk::Reference,
+                relative_path: 'packs/referencing_pack/some_file.rb',
+                constant: constant
+              )
+            end
+
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                ),
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(22, 5)
+                )
+              ]
+            end
+
+            it 'leaves a comment for each violation' do
+              packwerk.check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 2
+
+              first_actual_markdown = actual_markdowns.first
+              expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(first_actual_markdown.line).to eq 12
+              expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(first_actual_markdown.type).to eq :markdown
+
+              second_actual_markdown = actual_markdowns.last
+              expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(second_actual_markdown.line).to eq 22
+              expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(second_actual_markdown.type).to eq :markdown
+            end
+          end
+
+          context 'within the same pack' do
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/referencing_pack/some_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                ),
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/referencing_pack/some_other_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                )
+              ]
+            end
+
+            it 'leaves a comment for each violation' do
+              packwerk.check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 2
+
+              first_actual_markdown = actual_markdowns.first
+              expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(first_actual_markdown.line).to eq 12
+              expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(first_actual_markdown.type).to eq :markdown
+
+              second_actual_markdown = actual_markdowns.last
+              expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(second_actual_markdown.line).to eq 12
+              expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_other_file.rb'
+              expect(second_actual_markdown.type).to eq :markdown
+            end
+          end
+
+          context 'across different packs' do
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/referencing_pack/some_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                ),
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/another_referencing_pack/some_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                )
+              ]
+            end
+
+            it 'leaves a comment for each violation' do
+              packwerk.check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 2
+
+              first_actual_markdown = actual_markdowns.first
+              expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(first_actual_markdown.line).to eq 12
+              expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(first_actual_markdown.type).to eq :markdown
+
+              second_actual_markdown = actual_markdowns.last
+              expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(second_actual_markdown.line).to eq 12
+              expect(second_actual_markdown.file).to eq 'packs/another_referencing_pack/some_file.rb'
+              expect(second_actual_markdown.type).to eq :markdown
+            end
+          end
+        end
+
+        context 'with grouping per constant per pack' do
+          let(:run_packwerk_check) do
+            packwerk.check(
+              grouping_strategy: DangerPackwerk::PerConstantPerPackGrouping
             )
           end
 
-          let(:offenses) do
-            [
+          context 'on the same line' do
+            let(:reference) do
               sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: reference,
-                violation_type: Packwerk::ViolationType::Privacy,
-                message: 'Vanilla message about privacy violations',
-                location: Packwerk::Node::Location.new(12, 15)
-              ),
-              sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: reference,
-                violation_type: Packwerk::ViolationType::Dependency,
-                message: 'Vanilla message about dependency violations',
-                location: Packwerk::Node::Location.new(12, 15)
+                Packwerk::Reference,
+                relative_path: 'packs/referencing_pack/some_file.rb',
+                constant: constant
               )
-            ]
+            end
+
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 15)
+                ),
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Dependency,
+                  message: 'Vanilla message about dependency violations',
+                  location: Packwerk::Node::Location.new(12, 15)
+                )
+              ]
+            end
+
+            it 'leaves one comment' do
+              run_packwerk_check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about dependency violations"
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
           end
 
-          it 'leaves one comment' do
-            packwerk.check
-            expect(dangerfile.status_report[:warnings]).to be_empty
-            expect(dangerfile.status_report[:errors]).to be_empty
-            actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 1
-            actual_markdown = actual_markdowns.first
-            expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about dependency violations"
-            expect(actual_markdown.line).to eq 12
-            expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
-            expect(actual_markdown.type).to eq :markdown
-          end
-        end
-
-        context 'within the same file' do
-          let(:reference) do
-            sorbet_double(
-              Packwerk::Reference,
-              relative_path: 'packs/referencing_pack/some_file.rb',
-              constant: constant
-            )
-          end
-
-          let(:offenses) do
-            [
+          context 'within the same file' do
+            let(:reference) do
               sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: reference,
-                violation_type: Packwerk::ViolationType::Privacy,
-                message: 'Vanilla message about privacy violations',
-                location: Packwerk::Node::Location.new(12, 5)
-              ),
-              sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: reference,
-                violation_type: Packwerk::ViolationType::Privacy,
-                message: 'Vanilla message about privacy violations',
-                location: Packwerk::Node::Location.new(22, 5)
+                Packwerk::Reference,
+                relative_path: 'packs/referencing_pack/some_file.rb',
+                constant: constant
               )
-            ]
-          end
+            end
 
-          it 'leaves a comment for each violation' do
-            packwerk.check
-            expect(dangerfile.status_report[:warnings]).to be_empty
-            expect(dangerfile.status_report[:errors]).to be_empty
-
-            actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 2
-
-            first_actual_markdown = actual_markdowns.first
-            expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
-            expect(first_actual_markdown.line).to eq 12
-            expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
-            expect(first_actual_markdown.type).to eq :markdown
-
-            second_actual_markdown = actual_markdowns.last
-            expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
-            expect(second_actual_markdown.line).to eq 22
-            expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
-            expect(second_actual_markdown.type).to eq :markdown
-          end
-        end
-
-        context 'within the same pack' do
-          let(:offenses) do
-            [
-              sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: sorbet_double(
-                  Packwerk::Reference,
-                  relative_path: 'packs/referencing_pack/some_file.rb',
-                  constant: constant
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
                 ),
-                violation_type: Packwerk::ViolationType::Privacy,
-                message: 'Vanilla message about privacy violations',
-                location: Packwerk::Node::Location.new(12, 5)
-              ),
-              sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: sorbet_double(
-                  Packwerk::Reference,
-                  relative_path: 'packs/referencing_pack/some_other_file.rb',
-                  constant: constant
-                ),
-                violation_type: Packwerk::ViolationType::Privacy,
-                message: 'Vanilla message about privacy violations',
-                location: Packwerk::Node::Location.new(12, 5)
-              )
-            ]
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: reference,
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(22, 5)
+                )
+              ]
+            end
+
+            it 'leaves one comment' do
+              run_packwerk_check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about privacy violations"
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
           end
 
-          it 'leaves a comment for each violation' do
-            packwerk.check
-            expect(dangerfile.status_report[:warnings]).to be_empty
-            expect(dangerfile.status_report[:errors]).to be_empty
-
-            actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 2
-
-            first_actual_markdown = actual_markdowns.first
-            expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
-            expect(first_actual_markdown.line).to eq 12
-            expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
-            expect(first_actual_markdown.type).to eq :markdown
-
-            second_actual_markdown = actual_markdowns.last
-            expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
-            expect(second_actual_markdown.line).to eq 12
-            expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_other_file.rb'
-            expect(second_actual_markdown.type).to eq :markdown
-          end
-        end
-
-        context 'across different packs' do
-          let(:offenses) do
-            [
-              sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: sorbet_double(
-                  Packwerk::Reference,
-                  relative_path: 'packs/referencing_pack/some_file.rb',
-                  constant: constant
+          context 'within the same pack' do
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/referencing_pack/some_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
                 ),
-                violation_type: Packwerk::ViolationType::Privacy,
-                message: 'Vanilla message about privacy violations',
-                location: Packwerk::Node::Location.new(12, 5)
-              ),
-              sorbet_double(
-                Packwerk::ReferenceOffense,
-                reference: sorbet_double(
-                  Packwerk::Reference,
-                  relative_path: 'packs/another_referencing_pack/some_file.rb',
-                  constant: constant
-                ),
-                violation_type: Packwerk::ViolationType::Privacy,
-                message: 'Vanilla message about privacy violations',
-                location: Packwerk::Node::Location.new(12, 5)
-              )
-            ]
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/referencing_pack/some_other_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                )
+              ]
+            end
+
+            it 'leaves one comment' do
+              run_packwerk_check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about privacy violations"
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
           end
 
-          it 'leaves a comment for each violation' do
-            packwerk.check
-            expect(dangerfile.status_report[:warnings]).to be_empty
-            expect(dangerfile.status_report[:errors]).to be_empty
+          context 'across different packs' do
+            before do
+              write_file('packs/referencing_pack/package.yml', <<~YML)
+                enforce_dependencies: true
+                enforce_privacy: true
+              YML
+              write_file('packs/another_referencing_pack/package.yml', <<~YML)
+                enforce_dependencies: true
+                enforce_privacy: true
+              YML
+            end
 
-            actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 2
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/referencing_pack/some_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                ),
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    relative_path: 'packs/another_referencing_pack/some_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                )
+              ]
+            end
 
-            first_actual_markdown = actual_markdowns.first
-            expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
-            expect(first_actual_markdown.line).to eq 12
-            expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
-            expect(first_actual_markdown.type).to eq :markdown
+            it 'leaves a comment for each violation' do
+              run_packwerk_check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
 
-            second_actual_markdown = actual_markdowns.last
-            expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
-            expect(second_actual_markdown.line).to eq 12
-            expect(second_actual_markdown.file).to eq 'packs/another_referencing_pack/some_file.rb'
-            expect(second_actual_markdown.type).to eq :markdown
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 2
+
+              first_actual_markdown = actual_markdowns.first
+              expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(first_actual_markdown.line).to eq 12
+              expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(first_actual_markdown.type).to eq :markdown
+
+              second_actual_markdown = actual_markdowns.last
+              expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(second_actual_markdown.line).to eq 12
+              expect(second_actual_markdown.file).to eq 'packs/another_referencing_pack/some_file.rb'
+              expect(second_actual_markdown.type).to eq :markdown
+            end
           end
         end
       end
