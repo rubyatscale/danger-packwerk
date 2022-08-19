@@ -145,6 +145,102 @@ module DangerPackwerk
         end
       end
 
+      context 'when there are violations on the same constant' do
+        context 'on the same line' do
+          let(:reference) do
+            sorbet_double(
+              Packwerk::Reference,
+              relative_path: 'packs/referencing_pack/some_file.rb',
+              constant: constant
+            )
+          end
+
+          let(:offenses) do
+            [
+              sorbet_double(
+                Packwerk::ReferenceOffense,
+                reference: reference,
+                violation_type: Packwerk::ViolationType::Privacy,
+                message: 'Vanilla message about privacy violations',
+                location: Packwerk::Node::Location.new(12, 15)
+              ),
+              sorbet_double(
+                Packwerk::ReferenceOffense,
+                reference: reference,
+                violation_type: Packwerk::ViolationType::Dependency,
+                message: 'Vanilla message about dependency violations',
+                location: Packwerk::Node::Location.new(12, 15)
+              )
+            ]
+          end
+
+          let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
+
+          it 'leaves one comment' do
+            packwerk.check
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 1
+            actual_markdown = actual_markdowns.first
+            expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about dependency violations"
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+            expect(actual_markdown.type).to eq :markdown
+          end
+        end
+
+        context 'within the same file' do
+          let(:reference) do
+            sorbet_double(
+              Packwerk::Reference,
+              relative_path: 'packs/referencing_pack/some_file.rb',
+              constant: constant
+            )
+          end
+
+          let(:offenses) do
+            [
+              sorbet_double(
+                Packwerk::ReferenceOffense,
+                reference: reference,
+                violation_type: Packwerk::ViolationType::Privacy,
+                message: 'Vanilla message about privacy violations',
+                location: Packwerk::Node::Location.new(12, 5)
+              ),
+              sorbet_double(
+                Packwerk::ReferenceOffense,
+                reference: reference,
+                violation_type: Packwerk::ViolationType::Privacy,
+                message: 'Vanilla message about privacy violations',
+                location: Packwerk::Node::Location.new(22, 5)
+              )
+            ]
+          end
+
+          let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
+
+          xit 'leaves a comment for each violation' do
+            packwerk.check
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 1
+            actual_markdown = actual_markdowns.first
+            expect(actual_markdown.message).to eq "Vanilla message about dependency violations\n\nVanilla message about privacy violations"
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+            expect(actual_markdown.type).to eq :markdown
+          end
+        end
+
+        context 'within the same pack' do
+        end
+
+        context 'across different packs' do
+        end
+      end
+
       context 'when there are 100 new violations when running packwerk check' do
         let(:offenses) do
           100.times.to_a.map do |i|
