@@ -243,6 +243,55 @@ module DangerPackwerk
         end
 
         context 'within the same pack' do
+          let(:offenses) do
+            [
+              sorbet_double(
+                Packwerk::ReferenceOffense,
+                reference: sorbet_double(
+                  Packwerk::Reference,
+                  relative_path: 'packs/referencing_pack/some_file.rb',
+                  constant: constant
+                ),
+                violation_type: Packwerk::ViolationType::Privacy,
+                message: 'Vanilla message about privacy violations',
+                location: Packwerk::Node::Location.new(12, 5)
+              ),
+              sorbet_double(
+                Packwerk::ReferenceOffense,
+                reference: sorbet_double(
+                  Packwerk::Reference,
+                  relative_path: 'packs/referencing_pack/some_other_file.rb',
+                  constant: constant
+                ),
+                violation_type: Packwerk::ViolationType::Privacy,
+                message: 'Vanilla message about privacy violations',
+                location: Packwerk::Node::Location.new(12, 5)
+              )
+            ]
+          end
+
+          let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
+
+          it 'leaves a comment for each violation' do
+            packwerk.check
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 2
+
+            first_actual_markdown = actual_markdowns.first
+            expect(first_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(first_actual_markdown.line).to eq 12
+            expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+            expect(first_actual_markdown.type).to eq :markdown
+
+            second_actual_markdown = actual_markdowns.last
+            expect(second_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(second_actual_markdown.line).to eq 12
+            expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_other_file.rb'
+            expect(second_actual_markdown.type).to eq :markdown
+          end
         end
 
         context 'across different packs' do
