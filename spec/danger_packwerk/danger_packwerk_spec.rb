@@ -7,6 +7,7 @@ module DangerPackwerk
       let(:plugin) { packwerk }
       let(:offenses) { [] }
       let(:files_for_packwerk) { ['packs/referencing_pack/some_file.rb'] }
+      let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
       before do
         allow_any_instance_of(Packwerk::Cli).to receive(:execute_command).with(['check', *files_for_packwerk])
@@ -47,7 +48,6 @@ module DangerPackwerk
 
       context 'when there are syntax errors in analyzed files' do
         let(:offenses) { [sorbet_double(Packwerk::Parsers::ParseResult)] }
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
         it 'exits gracefully' do
           packwerk.check
@@ -73,7 +73,6 @@ module DangerPackwerk
 
       context 'when there is a new privacy violation when running packwerk check' do
         let(:offenses) { [generic_privacy_violation] }
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
         it 'leaves an inline comment helping the user figure out what to do next' do
           packwerk.check
@@ -111,7 +110,6 @@ module DangerPackwerk
 
       context 'when there is a new dependency violation when running packwerk check' do
         let(:offenses) { [generic_dependency_violation] }
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
         it 'leaves an inline comment helping the user figure out what to do next' do
           packwerk.check
@@ -129,7 +127,6 @@ module DangerPackwerk
 
       context 'when there is a new dependency and privacy violation when running packwerk check' do
         let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
         it 'leaves an inline comment helping the user figure out what to do next' do
           packwerk.check
@@ -174,8 +171,6 @@ module DangerPackwerk
             ]
           end
 
-          let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
-
           it 'leaves one comment' do
             packwerk.check
             expect(dangerfile.status_report[:warnings]).to be_empty
@@ -217,8 +212,6 @@ module DangerPackwerk
               )
             ]
           end
-
-          let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
           it 'leaves a comment for each violation' do
             packwerk.check
@@ -270,8 +263,6 @@ module DangerPackwerk
             ]
           end
 
-          let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
-
           it 'leaves a comment for each violation' do
             packwerk.check
             expect(dangerfile.status_report[:warnings]).to be_empty
@@ -322,8 +313,6 @@ module DangerPackwerk
             ]
           end
 
-          let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
-
           it 'leaves a comment for each violation' do
             packwerk.check
             expect(dangerfile.status_report[:warnings]).to be_empty
@@ -360,8 +349,6 @@ module DangerPackwerk
           end
         end
 
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
-
         context 'the user has not passed in max comments' do
           it 'stops commenting after 15 comments' do
             packwerk.check
@@ -385,7 +372,6 @@ module DangerPackwerk
 
       context 'the user has passed in a custom offense formatter' do
         let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
         it 'leaves an inline comment helping the user figure out what to do next' do
           packwerk.check(
@@ -404,8 +390,6 @@ module DangerPackwerk
       end
 
       context 'the user has passed fail_build' do
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
-
         context 'there are offenses' do
           let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
 
@@ -437,7 +421,6 @@ module DangerPackwerk
 
       context 'the user has configured on_failure' do
         let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
-        let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
         it 'fails the build' do
           on_failure_called_message = false
