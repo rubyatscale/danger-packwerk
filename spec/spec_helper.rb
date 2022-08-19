@@ -55,7 +55,7 @@ RSpec.configure do |config|
 
   config.include DangerHelpers
 
-  config.before do |example|
+  config.before do |_example|
     ParsePackwerk.bust_cache!
   end
 
