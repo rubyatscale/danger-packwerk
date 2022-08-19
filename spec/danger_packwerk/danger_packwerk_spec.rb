@@ -10,6 +10,10 @@ module DangerPackwerk
       let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
       before do
+        write_file('package.yml', <<~YML)
+          enforce_dependencies: true
+          enforce_privacy: true
+        YML
         allow_any_instance_of(Packwerk::Cli).to receive(:execute_command).with(['check', *files_for_packwerk])
         allow_any_instance_of(PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
       end
@@ -415,14 +419,13 @@ module DangerPackwerk
             end
 
             it 'leaves one comment' do
-              pending
               run_packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
               expect(actual_markdowns.count).to eq 1
               actual_markdown = actual_markdowns.first
-              expect(actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about privacy violations"
               expect(actual_markdown.line).to eq 12
               expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
               expect(actual_markdown.type).to eq :markdown
@@ -458,14 +461,13 @@ module DangerPackwerk
             end
 
             it 'leaves one comment' do
-              pending
               run_packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
               expect(actual_markdowns.count).to eq 1
               actual_markdown = actual_markdowns.first
-              expect(actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(actual_markdown.message).to eq "Vanilla message about privacy violations\n\nVanilla message about privacy violations"
               expect(actual_markdown.line).to eq 12
               expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
               expect(actual_markdown.type).to eq :markdown
@@ -473,6 +475,17 @@ module DangerPackwerk
           end
 
           context 'across different packs' do
+            before do
+              write_file('packs/referencing_pack/package.yml', <<~YML)
+                enforce_dependencies: true
+                enforce_privacy: true
+              YML
+              write_file('packs/another_referencing_pack/package.yml', <<~YML)
+                enforce_dependencies: true
+                enforce_privacy: true
+              YML
+            end
+
             let(:offenses) do
               [
                 sorbet_double(

@@ -3,6 +3,7 @@
 
 require 'danger'
 require 'packwerk'
+require 'parse_packwerk'
 require 'sorbet-runtime'
 require 'danger-packwerk/packwerk_wrapper'
 
@@ -86,11 +87,21 @@ module DangerPackwerk
       # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation
       # they are (privacy or dependency). We put privacy and dependency violation messages in the same comment since they would occur on the same line.
       packwerk_reference_offenses.group_by do |packwerk_reference_offense|
-        [
-          packwerk_reference_offense.reference.constant.name,
-          packwerk_reference_offense.location.line,
-          packwerk_reference_offense.reference.relative_path
-        ]
+        case grouping_strategy
+        when CommentGroupingStrategy::PerConstantPerLocation
+          [
+            packwerk_reference_offense.reference.constant.name,
+            packwerk_reference_offense.location.line,
+            packwerk_reference_offense.reference.relative_path
+          ]
+        when CommentGroupingStrategy::PerConstantPerPack
+          [
+            packwerk_reference_offense.reference.constant.name,
+            ParsePackwerk.package_from_path(packwerk_reference_offense.reference.relative_path)
+          ]
+        else
+          T.absurd(grouping_strategy)
+        end
       end.each do |_group, unique_packwerk_reference_offenses|
         break if current_comment_count >= max_comments
 
