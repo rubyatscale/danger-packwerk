@@ -220,17 +220,25 @@ module DangerPackwerk
 
           let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
-          xit 'leaves a comment for each violation' do
+          it 'leaves a comment for each violation' do
             packwerk.check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
+
             actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 1
-            actual_markdown = actual_markdowns.first
-            expect(actual_markdown.message).to eq "Vanilla message about dependency violations\n\nVanilla message about privacy violations"
-            expect(actual_markdown.line).to eq 12
-            expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
-            expect(actual_markdown.type).to eq :markdown
+            expect(actual_markdowns.count).to eq 2
+
+            first_actual_markdown = actual_markdowns.first
+            expect(first_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(first_actual_markdown.line).to eq 12
+            expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+            expect(first_actual_markdown.type).to eq :markdown
+
+            second_actual_markdown = actual_markdowns.last
+            expect(second_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(second_actual_markdown.line).to eq 22
+            expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+            expect(second_actual_markdown.type).to eq :markdown
           end
         end
 
