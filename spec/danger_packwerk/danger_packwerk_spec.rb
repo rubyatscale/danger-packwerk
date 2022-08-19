@@ -229,13 +229,13 @@ module DangerPackwerk
             expect(actual_markdowns.count).to eq 2
 
             first_actual_markdown = actual_markdowns.first
-            expect(first_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
             expect(first_actual_markdown.line).to eq 12
             expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
             expect(first_actual_markdown.type).to eq :markdown
 
             second_actual_markdown = actual_markdowns.last
-            expect(second_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
             expect(second_actual_markdown.line).to eq 22
             expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
             expect(second_actual_markdown.type).to eq :markdown
@@ -281,13 +281,13 @@ module DangerPackwerk
             expect(actual_markdowns.count).to eq 2
 
             first_actual_markdown = actual_markdowns.first
-            expect(first_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
             expect(first_actual_markdown.line).to eq 12
             expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
             expect(first_actual_markdown.type).to eq :markdown
 
             second_actual_markdown = actual_markdowns.last
-            expect(second_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
             expect(second_actual_markdown.line).to eq 12
             expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_other_file.rb'
             expect(second_actual_markdown.type).to eq :markdown
@@ -333,13 +333,13 @@ module DangerPackwerk
             expect(actual_markdowns.count).to eq 2
 
             first_actual_markdown = actual_markdowns.first
-            expect(first_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations'
             expect(first_actual_markdown.line).to eq 12
             expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
             expect(first_actual_markdown.type).to eq :markdown
 
             second_actual_markdown = actual_markdowns.last
-            expect(second_actual_markdown.message).to eq "Vanilla message about privacy violations"
+            expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations'
             expect(second_actual_markdown.line).to eq 12
             expect(second_actual_markdown.file).to eq 'packs/another_referencing_pack/some_file.rb'
             expect(second_actual_markdown.type).to eq :markdown
