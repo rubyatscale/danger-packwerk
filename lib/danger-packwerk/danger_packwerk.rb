@@ -38,7 +38,8 @@ module DangerPackwerk
         offenses_formatter: OffensesFormatter,
         fail_build: T::Boolean,
         failure_message: String,
-        on_failure: OnFailure
+        on_failure: OnFailure,
+        grouping_strategy: CommentGroupingStrategy
       ).void
     end
     def check(
@@ -46,7 +47,8 @@ module DangerPackwerk
       offenses_formatter: DEFAULT_OFFENSES_FORMATTER,
       fail_build: DEFAULT_FAIL,
       failure_message: DEFAULT_FAILURE_MESSAGE,
-      on_failure: DEFAULT_ON_FAILURE
+      on_failure: DEFAULT_ON_FAILURE,
+      grouping_strategy: CommentGroupingStrategy::PerConstantPerLocation
     )
       # This is important because by default, Danger will leave a concantenated list of all its messages if it can't find a commentable place in the
       # diff to leave its message. This is an especially bad UX because it will be a huge wall of text not connected to the source of the issue.
