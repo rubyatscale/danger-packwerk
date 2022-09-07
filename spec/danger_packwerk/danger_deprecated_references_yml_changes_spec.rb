@@ -175,7 +175,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to remove some, but not all, violations' do
+      context 'a deprecated_references.yml file is modified to remove some, but not all, violations' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -223,7 +223,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to add a new violation against a new constant in an existing file' do
+      context 'a deprecated_references.yml file is modified to add a new violation against a new constant in an existing file' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -292,7 +292,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to add a new reference against an existing constant in an existing file' do
+      context 'a deprecated_references.yml file is modified to add a new reference against an existing constant in an existing file' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -351,7 +351,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to add another violation on a file with an existing violation' do
+      context 'a deprecated_references.yml file is modified to add another violation on a file with an existing violation' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -428,7 +428,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to add another violation on a file with an existing violation, and the constants have clashing names' do
+      context 'a deprecated_references.yml file is modified to add another violation on a file with an existing violation, and the constants have clashing names' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -505,7 +505,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to change violations in many files' do
+      context 'a deprecated_references.yml file is modified to change violations in many files' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -582,7 +582,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file is modified to add 30 and remove 15 violations' do
+      context 'a deprecated_references.yml file is modified to add 30 and remove 15 violations' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -703,7 +703,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_refrences.yml file using single quotes is modified' do
+      context 'a deprecated_references.yml file using single quotes is modified' do
         let(:modified_files) do
           [
             write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
@@ -753,6 +753,108 @@ module DangerPackwerk
                   files:
                   - packs/some_pack/some_class1.rb
                   - packs/some_pack/some_class2.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `OtherPackClass` considers this private API.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
+            EXPECTED
+          ).and_nothing_else
+        end
+      end
+
+      context 'a deprecated_references.yml file has been modified with files that have been renamed' do
+        let(:renamed_files) do
+          [
+            {
+              after: 'packs/some_pack/some_class_with_new_name.rb',
+              before: 'packs/some_pack/some_class_with_old_name.rb'
+            }
+          ]
+        end
+
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class_with_new_name.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "OtherPackClass":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class_with_old_name.rb
+          YML
+        end
+
+        it 'does not display a markdown message' do
+          subject
+          expect(dangerfile).to produce_no_danger_messages
+        end
+      end
+
+      context 'a deprecated_references.yml file has been modified with files that have been renamed AND been added' do
+        let(:renamed_files) do
+          [
+            {
+              after: 'packs/some_pack/some_class_with_new_name.rb',
+              before: 'packs/some_pack/some_class_with_old_name.rb'
+            }
+          ]
+        end
+
+        let(:added_files) { ['packs/some_pack/some_entirely_new_class.rb'] }
+
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class_with_new_name.rb
+                  - packs/some_pack/some_entirely_new_class.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "OtherPackClass":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class_with_old_name.rb
+          YML
+        end
+
+        it 'does not display a markdown message' do
+          subject
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class_with_new_name.rb
+                  - packs/some_pack/some_entirely_new_class.rb
               ==================== DANGER_START
               Hi! It looks like the pack defining `OtherPackClass` considers this private API.
               We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
