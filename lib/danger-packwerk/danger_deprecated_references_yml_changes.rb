@@ -45,7 +45,14 @@ module DangerPackwerk
 
       current_comment_count = 0
 
-      violation_diff.added_violations.group_by(&:class_name).each do |_class_name, violations|
+      # The format for git.renamed_files is a T::Array[{after: "some/path/new", before: "some/path/old"}]
+      renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
+
+      violations_to_comment_on = violation_diff.added_violations.reject do |violation|
+        renamed_files.include?(violation.file)
+      end
+
+      violations_to_comment_on.group_by(&:class_name).each do |_class_name, violations|
         break if current_comment_count >= max_comments
 
         location = T.must(violations.first).file_location
