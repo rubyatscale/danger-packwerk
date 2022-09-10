@@ -85,7 +85,6 @@ module DangerPackwerk
       packwerk_reference_offenses = PackwerkWrapper.get_offenses_for_files(targeted_files.to_a).compact
 
       renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
-      renamed_constants = []
 
       # Ignore references that have been renamed
       packwerk_reference_offenses_to_care_about = packwerk_reference_offenses.reject do |packwerk_reference_offense|

@@ -11,7 +11,7 @@ module DangerPackwerk
 
       let(:load_paths) do
         {
-          'packs/some_pack' => 'Object',
+          'packs/some_pack' => 'Object'
         }
       end
 
@@ -32,7 +32,6 @@ module DangerPackwerk
           'packs/some_pack/some_class_with_old_name.rb'
         ].each { |path| write_file(path) }
         allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
-
       end
 
       let(:constant) do

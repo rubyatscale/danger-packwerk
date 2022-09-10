@@ -26,7 +26,7 @@ module DangerPackwerk
       params(
         added_offenses_formatter: AddedOffensesFormatter,
         before_comment: BeforeComment,
-        max_comments: Integer,
+        max_comments: Integer
       ).void
     end
     def check(
@@ -66,9 +66,7 @@ module DangerPackwerk
 
       violation_diff.added_violations.each do |violation|
         filepath_that_defines_this_constant = Private.constant_resolver.resolve(violation.class_name)&.location
-        if renamed_files.include?(filepath_that_defines_this_constant)
-          renamed_constants << violation.class_name
-        end
+        renamed_constants << violation.class_name if renamed_files.include?(filepath_that_defines_this_constant)
       end
 
       violations_to_comment_on = violation_diff.added_violations.reject do |violation|

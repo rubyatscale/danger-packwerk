@@ -11,12 +11,12 @@ module DangerPackwerk
 
       let(:load_paths) do
         {
-          'packs/some_pack' => 'Object',
+          'packs/some_pack' => 'Object'
         }
       end
 
       let(:before_comment) do
-        -> (violation_diff, changed_deprecated_references_ymls) do
+        lambda do |violation_diff, changed_deprecated_references_ymls|
           diff_json = {
             privacy: { plus: violation_diff.added_violations.count(&:privacy?), minus: violation_diff.removed_violations.count(&:privacy?) },
             dependency: { plus: violation_diff.added_violations.count(&:dependency?), minus: violation_diff.removed_violations.count(&:dependency?) }
