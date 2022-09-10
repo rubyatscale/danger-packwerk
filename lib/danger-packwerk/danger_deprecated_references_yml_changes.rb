@@ -22,22 +22,17 @@ module DangerPackwerk
     BeforeComment = T.type_alias { T.proc.params(violation_diff: ViolationDiff, changed_deprecated_references_ymls: T::Array[String]).void }
     DEFAULT_BEFORE_COMMENT = T.let(->(violation_diff, changed_deprecated_references_ymls) {}, BeforeComment)
 
-    ConstantResolver = T.type_alias { T.proc.params(constant_name: String).returns(String) }
-    DEFAULT_CONSTANT_RESOLVER = T.let(-> (constant_name) {}, ConstantResolver)
-
     sig do
       params(
         added_offenses_formatter: AddedOffensesFormatter,
         before_comment: BeforeComment,
         max_comments: Integer,
-        constant_resolver: ConstantResolver
       ).void
     end
     def check(
       added_offenses_formatter: DEFAULT_ADDED_OFFENSES_FORMATTER,
       before_comment: DEFAULT_BEFORE_COMMENT,
-      max_comments: DEFAULT_MAX_COMMENTS,
-      constant_resolver: DEFAULT_CONSTANT_RESOLVER
+      max_comments: DEFAULT_MAX_COMMENTS
     )
       changed_deprecated_references_ymls = (git.modified_files + git.added_files + git.deleted_files).grep(DEPRECATED_REFERENCES_PATTERN)
 
@@ -70,7 +65,7 @@ module DangerPackwerk
       renamed_constants = []
 
       violation_diff.added_violations.each do |violation|
-        filepath_that_defines_this_constant = constant_resolver.call(violation.class_name)
+        filepath_that_defines_this_constant = Private.constant_resolver.resolve(violation.class_name)&.location
         if renamed_files.include?(filepath_that_defines_this_constant)
           renamed_constants << violation.class_name
         end

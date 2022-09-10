@@ -9,7 +9,11 @@ module DangerPackwerk
         double(notify_slack: true)
       end
 
-      let(:constant_resolver) { -> (constant_name) {} }
+      let(:load_paths) do
+        {
+          'packs/some_pack' => 'Object',
+        }
+      end
 
       let(:before_comment) do
         -> (violation_diff, changed_deprecated_references_ymls) do
@@ -23,7 +27,6 @@ module DangerPackwerk
 
       subject do
         danger_deprecated_references_yml_changes.check(
-          constant_resolver: constant_resolver,
           before_comment: before_comment
         )
       end
@@ -46,6 +49,16 @@ module DangerPackwerk
           expect(File.read(patch_file)).to eq "some_fancy_patch\n"
           some_pack_deprecated_references_before
         end
+
+        # These paths need to exist for ConstantResolver
+        [
+          'packs/some_pack/some_class.rb',
+          'packs/some_pack/some_other_class.rb',
+          'packs/some_pack/some_file.rb',
+          'packs/some_pack/some_class_with_new_name.rb',
+          'packs/some_pack/some_class_with_old_name.rb'
+        ].each { |path| write_file(path) }
+        allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
       end
 
       context 'when no deprecated_references.yml files have been added or modified' do
@@ -877,13 +890,6 @@ module DangerPackwerk
       end
 
       context 'a deprecated_references.yml file has been modified with constants that have been renamed' do
-        let(:constant_resolver) do
-          -> (constant_name) do
-            return 'packs/some_pack/some_class_with_new_name.rb' if constant_name == 'SomeClassWithNewName'
-            return 'packs/some_pack/some_class_with_old_name.rb' if constant_name == 'SomeClassWithOldName'
-          end
-        end
-
         let(:renamed_files) do
           [
             {
@@ -926,13 +932,6 @@ module DangerPackwerk
       end
 
       context 'a deprecated_references.yml file has been modified with constants that have been renamed AND been added' do
-        let(:constant_resolver) do
-          -> (constant_name) do
-            return 'packs/some_pack/some_class_with_new_name.rb' if constant_name == 'SomeClassWithNewName'
-            return 'packs/some_pack/some_class_with_old_name.rb' if constant_name == 'SomeClassWithOldName'
-          end
-        end
-
         let(:renamed_files) do
           [
             {

@@ -9,6 +9,12 @@ module DangerPackwerk
       let(:files_for_packwerk) { ['packs/referencing_pack/some_file.rb'] }
       let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
+      let(:load_paths) do
+        {
+          'packs/some_pack' => 'Object',
+        }
+      end
+
       before do
         write_file('package.yml', <<~YML)
           enforce_dependencies: true
@@ -16,6 +22,17 @@ module DangerPackwerk
         YML
         allow_any_instance_of(Packwerk::Cli).to receive(:execute_command).with(['check', *files_for_packwerk])
         allow_any_instance_of(PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
+
+        # These paths need to exist for ConstantResolver
+        [
+          'packs/some_pack/some_class.rb',
+          'packs/some_pack/some_other_class.rb',
+          'packs/some_pack/some_file.rb',
+          'packs/some_pack/some_class_with_new_name.rb',
+          'packs/some_pack/some_class_with_old_name.rb'
+        ].each { |path| write_file(path) }
+        allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
+
       end
 
       let(:constant) do
@@ -629,6 +646,36 @@ module DangerPackwerk
                                        on_failure_called_message = "`on_failure` called with #{offenses.count} offenses"
                                      })
           expect(on_failure_called_message).to eq '`on_failure` called with 2 offenses'
+        end
+      end
+
+      context 'when there are new violations on renamed files' do
+        let(:files_for_packwerk) do
+          [
+            'packs/referencing_pack/some_file.rb',
+            'packs/some_pack/some_class_with_new_name.rb'
+          ]
+        end
+        let(:renamed_files) do
+          [
+            {
+              after: 'packs/some_pack/some_class_with_new_name.rb',
+              before: 'packs/some_pack/some_class_with_old_name.rb'
+            }
+          ]
+        end
+
+        let(:constant) do
+          sorbet_double(Packwerk::ConstantDiscovery::ConstantContext, name: 'SomeClassWithNewName')
+        end
+
+        let(:offenses) { [generic_dependency_violation] }
+
+        it 'does not leave an inline comment' do
+          packwerk.check
+          expect(dangerfile.status_report[:warnings]).to be_empty
+          expect(dangerfile.status_report[:errors]).to be_empty
+          expect(dangerfile.status_report[:markdowns]).to be_empty
         end
       end
     end

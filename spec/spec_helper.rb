@@ -57,6 +57,7 @@ RSpec.configure do |config|
 
   config.before do |_example|
     ParsePackwerk.bust_cache!
+    allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return({})
   end
 
   config.around do |example|
