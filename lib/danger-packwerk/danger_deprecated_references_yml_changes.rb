@@ -22,17 +22,22 @@ module DangerPackwerk
     BeforeComment = T.type_alias { T.proc.params(violation_diff: ViolationDiff, changed_deprecated_references_ymls: T::Array[String]).void }
     DEFAULT_BEFORE_COMMENT = T.let(->(violation_diff, changed_deprecated_references_ymls) {}, BeforeComment)
 
+    ConstantResolver = T.type_alias { T.proc.params(constant_name: String).returns(String) }
+    DEFAULT_CONSTANT_RESOLVER = T.let(-> (constant_name) {}, ConstantResolver)
+
     sig do
       params(
         added_offenses_formatter: AddedOffensesFormatter,
         before_comment: BeforeComment,
-        max_comments: Integer
+        max_comments: Integer,
+        constant_resolver: ConstantResolver
       ).void
     end
     def check(
       added_offenses_formatter: DEFAULT_ADDED_OFFENSES_FORMATTER,
       before_comment: DEFAULT_BEFORE_COMMENT,
-      max_comments: DEFAULT_MAX_COMMENTS
+      max_comments: DEFAULT_MAX_COMMENTS,
+      constant_resolver: DEFAULT_CONSTANT_RESOLVER
     )
       changed_deprecated_references_ymls = (git.modified_files + git.added_files + git.deleted_files).grep(DEPRECATED_REFERENCES_PATTERN)
 
@@ -48,8 +53,31 @@ module DangerPackwerk
       # The format for git.renamed_files is a T::Array[{after: "some/path/new", before: "some/path/old"}]
       renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
 
+      #
+      # This implementation creates some false negatives:
+      # That is – it doesn't capture some cases:
+      # 1) A file has been renamed without renaming a constant.
+      # That can happen if we change only the autoloaded portion of a filename.
+      # For example: `packs/foo/app/services/my_class.rb` (defines: `MyClass`)
+      # is changed to `packs/foo/app/public/my_class.rb` (still defines: `MyClass`)
+      #
+      # This implementation also doesn't cover these false positives:
+      # That is – it leaves a comment when it should not.
+      # 1) A CONSTANT within a class or module has been renamed.
+      # e.g. `class MyClass; MY_CONSTANT = 1; end` becomes `class MyClass; RENAMED_CONSTANT = 1; end`
+      # We would not detect based on file renames that `MY_CONSTANT` has been renamed.
+      #
+      renamed_constants = []
+
+      violation_diff.added_violations.each do |violation|
+        filepath_that_defines_this_constant = constant_resolver.call(violation.class_name)
+        if renamed_files.include?(filepath_that_defines_this_constant)
+          renamed_constants << violation.class_name
+        end
+      end
+
       violations_to_comment_on = violation_diff.added_violations.reject do |violation|
-        renamed_files.include?(violation.file)
+        renamed_files.include?(violation.file) || renamed_constants.include?(violation.class_name)
       end
 
       violations_to_comment_on.group_by(&:class_name).each do |_class_name, violations|

@@ -9,15 +9,22 @@ module DangerPackwerk
         double(notify_slack: true)
       end
 
+      let(:constant_resolver) { -> (constant_name) {} }
+
+      let(:before_comment) do
+        -> (violation_diff, changed_deprecated_references_ymls) do
+          diff_json = {
+            privacy: { plus: violation_diff.added_violations.count(&:privacy?), minus: violation_diff.removed_violations.count(&:privacy?) },
+            dependency: { plus: violation_diff.added_violations.count(&:dependency?), minus: violation_diff.removed_violations.count(&:dependency?) }
+          }
+          slack_notifier.notify_slack(diff_json, changed_deprecated_references_ymls)
+        end
+      end
+
       subject do
         danger_deprecated_references_yml_changes.check(
-          before_comment: lambda do |violation_diff, changed_deprecated_references_ymls|
-            diff_json = {
-              privacy: { plus: violation_diff.added_violations.count(&:privacy?), minus: violation_diff.removed_violations.count(&:privacy?) },
-              dependency: { plus: violation_diff.added_violations.count(&:dependency?), minus: violation_diff.removed_violations.count(&:dependency?) }
-            }
-            slack_notifier.notify_slack(diff_json, changed_deprecated_references_ymls)
-          end
+          constant_resolver: constant_resolver,
+          before_comment: before_comment
         )
       end
 
@@ -862,6 +869,130 @@ module DangerPackwerk
                   - packs/some_pack/some_entirely_new_class.rb
               ==================== DANGER_START
               Hi! It looks like the pack defining `OtherPackClass` considers this private API.
+              We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
+              ==================== DANGER_END
+            EXPECTED
+          ).and_nothing_else
+        end
+      end
+
+      context 'a deprecated_references.yml file has been modified with constants that have been renamed' do
+        let(:constant_resolver) do
+          -> (constant_name) do
+            return 'packs/some_pack/some_class_with_new_name.rb' if constant_name == 'SomeClassWithNewName'
+            return 'packs/some_pack/some_class_with_old_name.rb' if constant_name == 'SomeClassWithOldName'
+          end
+        end
+
+        let(:renamed_files) do
+          [
+            {
+              after: 'packs/some_pack/some_class_with_new_name.rb',
+              before: 'packs/some_pack/some_class_with_old_name.rb'
+            }
+          ]
+        end
+
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "SomeClassWithNewName":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_file.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "SomeClassWithOldName":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_file.rb
+          YML
+        end
+
+        it 'does not display a markdown message' do
+          subject
+          expect(dangerfile).to produce_no_danger_messages
+        end
+      end
+
+      context 'a deprecated_references.yml file has been modified with constants that have been renamed AND been added' do
+        let(:constant_resolver) do
+          -> (constant_name) do
+            return 'packs/some_pack/some_class_with_new_name.rb' if constant_name == 'SomeClassWithNewName'
+            return 'packs/some_pack/some_class_with_old_name.rb' if constant_name == 'SomeClassWithOldName'
+          end
+        end
+
+        let(:renamed_files) do
+          [
+            {
+              after: 'packs/some_pack/some_class_with_new_name.rb',
+              before: 'packs/some_pack/some_class_with_old_name.rb'
+            }
+          ]
+        end
+
+        let(:added_files) { ['packs/some_pack/some_entirely_new_class.rb'] }
+
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "SomeClassWithNewName":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_file.rb
+                "SomeNewClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_file.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "SomeClassWithOldName":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_file.rb
+          YML
+        end
+
+        it 'does not display a markdown message' do
+          subject
+          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "SomeClassWithNewName":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_file.rb
+                "SomeNewClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_file.rb
+              ==================== DANGER_START
+              Hi! It looks like the pack defining `SomeNewClass` considers this private API.
               We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through [the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf) for other ways to resolve. Could you add some context as a reply here about why we needed to add this violation?
               ==================== DANGER_END
             EXPECTED
