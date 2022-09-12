@@ -85,7 +85,6 @@ module DangerPackwerk
         removed_violations += base_commit_violations - head_commit_violations
       end
 
-
       # The format for git.renamed_files is a T::Array[{after: "some/path/new", before: "some/path/old"}]
       renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
 
