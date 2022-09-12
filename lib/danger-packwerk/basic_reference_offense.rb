@@ -37,12 +37,15 @@ module DangerPackwerk
     const :class_name, String
     const :file, String
     const :to_package_name, String
+    const :from_package_name, String
     const :type, String
     const :file_location, Location
 
     sig { params(deprecated_references_yml: String).returns(T::Array[BasicReferenceOffense]) }
     def self.from(deprecated_references_yml)
       deprecated_references_yml_pathname = Pathname.new(deprecated_references_yml)
+
+      from_package_name = T.must(ParsePackwerk.package_from_path(deprecated_references_yml_pathname)).name
       violations = Private::DeprecatedReferences.from(deprecated_references_yml_pathname).violations
 
       # See the larger comment below for more information on why we need this information.
@@ -106,7 +109,8 @@ module DangerPackwerk
             file: file,
             to_package_name: violation.to_package_name,
             type: violation.type,
-            file_location: file_location
+            file_location: file_location,
+            from_package_name: from_package_name
           )
         end
       end

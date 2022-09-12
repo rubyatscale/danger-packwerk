@@ -24,6 +24,11 @@ module DangerPackwerk
       let(:some_pack_deprecated_references_before) { nil }
 
       before do
+        write_file('packs/some_pack/package.yml', <<~YML)
+          enforce_privacy: true
+          enforce_dependencies: true
+        YML
+
         allow(danger_deprecated_references_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/deprecated_references.yml' => double(patch: 'some_fancy_patch') })
 
         # After we make the system call to apply the inverse of the deletion patch, we should expect the file
