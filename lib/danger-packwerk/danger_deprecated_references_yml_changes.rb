@@ -45,35 +45,7 @@ module DangerPackwerk
 
       current_comment_count = 0
 
-      # The format for git.renamed_files is a T::Array[{after: "some/path/new", before: "some/path/old"}]
-      renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
-
-      #
-      # This implementation creates some false negatives:
-      # That is – it doesn't capture some cases:
-      # 1) A file has been renamed without renaming a constant.
-      # That can happen if we change only the autoloaded portion of a filename.
-      # For example: `packs/foo/app/services/my_class.rb` (defines: `MyClass`)
-      # is changed to `packs/foo/app/public/my_class.rb` (still defines: `MyClass`)
-      #
-      # This implementation also doesn't cover these false positives:
-      # That is – it leaves a comment when it should not.
-      # 1) A CONSTANT within a class or module has been renamed.
-      # e.g. `class MyClass; MY_CONSTANT = 1; end` becomes `class MyClass; RENAMED_CONSTANT = 1; end`
-      # We would not detect based on file renames that `MY_CONSTANT` has been renamed.
-      #
-      renamed_constants = []
-
-      violation_diff.added_violations.each do |violation|
-        filepath_that_defines_this_constant = Private.constant_resolver.resolve(violation.class_name)&.location
-        renamed_constants << violation.class_name if renamed_files.include?(filepath_that_defines_this_constant)
-      end
-
-      violations_to_comment_on = violation_diff.added_violations.reject do |violation|
-        renamed_files.include?(violation.file) || renamed_constants.include?(violation.class_name)
-      end
-
-      violations_to_comment_on.group_by(&:class_name).each do |_class_name, violations|
+      violation_diff.added_violations.group_by(&:class_name).each do |_class_name, violations|
         break if current_comment_count >= max_comments
 
         location = T.must(violations.first).file_location
@@ -113,8 +85,37 @@ module DangerPackwerk
         removed_violations += base_commit_violations - head_commit_violations
       end
 
+
+      # The format for git.renamed_files is a T::Array[{after: "some/path/new", before: "some/path/old"}]
+      renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
+
+      #
+      # This implementation creates some false negatives:
+      # That is – it doesn't capture some cases:
+      # 1) A file has been renamed without renaming a constant.
+      # That can happen if we change only the autoloaded portion of a filename.
+      # For example: `packs/foo/app/services/my_class.rb` (defines: `MyClass`)
+      # is changed to `packs/foo/app/public/my_class.rb` (still defines: `MyClass`)
+      #
+      # This implementation also doesn't cover these false positives:
+      # That is – it leaves a comment when it should not.
+      # 1) A CONSTANT within a class or module has been renamed.
+      # e.g. `class MyClass; MY_CONSTANT = 1; end` becomes `class MyClass; RENAMED_CONSTANT = 1; end`
+      # We would not detect based on file renames that `MY_CONSTANT` has been renamed.
+      #
+      renamed_constants = []
+
+      added_violations.each do |violation|
+        filepath_that_defines_this_constant = Private.constant_resolver.resolve(violation.class_name)&.location
+        renamed_constants << violation.class_name if renamed_files.include?(filepath_that_defines_this_constant)
+      end
+
+      relevant_added_violations = added_violations.reject do |violation|
+        renamed_files.include?(violation.file) || renamed_constants.include?(violation.class_name)
+      end
+
       ViolationDiff.new(
-        added_violations: added_violations,
+        added_violations: relevant_added_violations,
         removed_violations: removed_violations
       )
     end
