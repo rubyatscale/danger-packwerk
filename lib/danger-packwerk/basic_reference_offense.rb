@@ -45,7 +45,8 @@ module DangerPackwerk
     def self.from(deprecated_references_yml)
       deprecated_references_yml_pathname = Pathname.new(deprecated_references_yml)
 
-      from_package_name = T.must(ParsePackwerk.package_from_path(deprecated_references_yml_pathname)).name
+      from_package = ParsePackwerk.package_from_path(deprecated_references_yml_pathname)
+      from_package_name = from_package.name
       violations = Private::DeprecatedReferences.from(deprecated_references_yml_pathname).violations
 
       # See the larger comment below for more information on why we need this information.

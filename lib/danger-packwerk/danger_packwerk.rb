@@ -84,14 +84,23 @@ module DangerPackwerk
 
       packwerk_reference_offenses = PackwerkWrapper.get_offenses_for_files(targeted_files.to_a).compact
 
+      renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
+
+      # Ignore references that have been renamed
+      packwerk_reference_offenses_to_care_about = packwerk_reference_offenses.reject do |packwerk_reference_offense|
+        constant_name = packwerk_reference_offense.reference.constant.name
+        filepath_that_defines_this_constant = Private.constant_resolver.resolve(constant_name)&.location
+        renamed_files.include?(filepath_that_defines_this_constant)
+      end
+
       # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation
       # they are (privacy or dependency). We put privacy and dependency violation messages in the same comment since they would occur on the same line.
-      packwerk_reference_offenses.group_by do |packwerk_reference_offense|
+      packwerk_reference_offenses_to_care_about.group_by do |packwerk_reference_offense|
         case grouping_strategy
         when CommentGroupingStrategy::PerConstantPerLocation
           [
             packwerk_reference_offense.reference.constant.name,
-            packwerk_reference_offense.location.line,
+            packwerk_reference_offense.location&.line,
             packwerk_reference_offense.reference.relative_path
           ]
         when CommentGroupingStrategy::PerConstantPerPack
@@ -108,7 +117,7 @@ module DangerPackwerk
         current_comment_count += 1
 
         reference_offense = T.must(unique_packwerk_reference_offenses.first)
-        line_number = reference_offense.location.line
+        line_number = reference_offense.location&.line
         referencing_file = reference_offense.reference.relative_path
 
         message = offenses_formatter.call(unique_packwerk_reference_offenses)
