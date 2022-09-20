@@ -77,7 +77,7 @@ module DangerPackwerk
         deleted_violations = get_violations_before_patch_for(deleted_deprecated_references_yml_file)
         removed_violations += deleted_violations
       end
-      
+
       # The format for git.renamed_files is a T::Array[{after: "some/path/new", before: "some/path/old"}]
       renamed_files_before = git.renamed_files.map { |before_after_file| before_after_file[:before] }
       renamed_files_after = git.renamed_files.map { |before_after_file| before_after_file[:after] }
@@ -86,6 +86,7 @@ module DangerPackwerk
         # We skip over modified files if one of the modified files is a renamed `deprecated_references.yml` file.
         # This allows us to rename packs while ignoring "new violations" in those renamed packs.
         next if renamed_files_before.include?(modified_deprecated_references_yml_file)
+
         head_commit_violations = BasicReferenceOffense.from(modified_deprecated_references_yml_file)
         base_commit_violations = get_violations_before_patch_for(modified_deprecated_references_yml_file)
         added_violations += head_commit_violations - base_commit_violations
