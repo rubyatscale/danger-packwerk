@@ -39,6 +39,11 @@ module DangerPackwerk
           enforce_dependencies: true
         YML
 
+        write_file('package.yml', <<~YML)
+          enforce_privacy: true
+          enforce_dependencies: true
+        YML
+
         allow(danger_deprecated_references_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/deprecated_references.yml' => double(patch: 'some_fancy_patch') })
 
         # After we make the system call to apply the inverse of the deletion patch, we should expect the file
@@ -974,7 +979,7 @@ module DangerPackwerk
           YML
         end
 
-        it 'does not display a markdown message' do
+        it 'does display a markdown message' do
           subject
           expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
             <<~EXPECTED
@@ -996,6 +1001,44 @@ module DangerPackwerk
               ==================== DANGER_END
             EXPECTED
           ).and_nothing_else
+        end
+      end
+
+      context 'a package has been renamed, causing a deprecated references file to be deleted but registered as a modification' do
+        before do
+          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "SomeClassWithNewName":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_file.rb
+          YML
+        end
+
+        let(:renamed_files) do
+          [
+            {
+              after: 'packs/some_pack/deprecated_references.yml',
+              before: 'packs/old_pack_name/deprecated_references.yml'
+            }
+          ]
+        end
+
+        let(:modified_files) do
+          [
+            some_pack_deprecated_references_before
+          ]
+        end
+
+        let(:some_pack_deprecated_references_before) do
+          'packs/old_pack_name/deprecated_references.yml'
+        end
+
+        it 'does not display a markdown message' do
+          subject
+          expect(dangerfile).to produce_no_danger_messages
         end
       end
     end
