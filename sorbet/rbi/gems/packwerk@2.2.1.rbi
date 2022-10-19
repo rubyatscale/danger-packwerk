@@ -5,31 +5,38 @@
 # Please instead update this file by running `bin/tapioca gem packwerk`.
 
 module Packwerk
+  extend ::ActiveSupport::Autoload
 end
 
+# Extracts the load paths from the analyzed application so that we can map constant names to paths.
 module Packwerk::ApplicationLoadPaths
   class << self
-    sig { returns(T::Array[::String]) }
+    sig { returns(T::Hash[::String, ::Module]) }
     def extract_application_autoload_paths; end
 
-    sig { params(root: ::String, environment: ::String).returns(T::Array[::String]) }
+    sig { params(root: ::String, environment: ::String).returns(T::Hash[::String, ::Module]) }
     def extract_relevant_paths(root, environment); end
 
     sig do
       params(
-        all_paths: T::Array[::String],
+        all_paths: T::Hash[::String, ::Module],
         bundle_path: ::Pathname,
         rails_root: ::Pathname
-      ).returns(T::Array[::Pathname])
+      ).returns(T::Hash[::Pathname, ::Module])
     end
     def filter_relevant_paths(all_paths, bundle_path: T.unsafe(nil), rails_root: T.unsafe(nil)); end
 
-    sig { params(paths: T::Array[::Pathname], rails_root: ::Pathname).returns(T::Array[::String]) }
-    def relative_path_strings(paths, rails_root: T.unsafe(nil)); end
+    sig do
+      params(
+        load_paths: T::Hash[::Pathname, ::Module],
+        rails_root: ::Pathname
+      ).returns(T::Hash[::String, ::Module])
+    end
+    def relative_path_strings(load_paths, rails_root: T.unsafe(nil)); end
 
     private
 
-    sig { params(paths: T::Array[T.untyped]).void }
+    sig { params(paths: T::Hash[T.untyped, ::Module]).void }
     def assert_load_paths_present(paths); end
 
     sig { params(root: ::String, environment: ::String).void }
@@ -37,6 +44,8 @@ module Packwerk::ApplicationLoadPaths
   end
 end
 
+# Checks the structure of the application and its packwerk configuration to make sure we can run a check and deliver
+# correct results.
 class Packwerk::ApplicationValidator
   sig { params(config_file_path: ::String, configuration: ::Packwerk::Configuration, environment: ::String).void }
   def initialize(config_file_path:, configuration:, environment:); end
@@ -75,6 +84,13 @@ class Packwerk::ApplicationValidator
   end
   def assert_constants_can_be_loaded(constants, config_file_path); end
 
+  # Convert the cycles:
+  #
+  #   [[a, b, c], [b, c]]
+  #
+  # to the string:
+  #
+  #   ["a -> b -> c -> a", "b -> c -> b"]
   sig { params(cycles: T.untyped).returns(T::Array[::String]) }
   def build_cycle_strings(cycles); end
 
@@ -133,6 +149,33 @@ class Packwerk::ApplicationValidator::Result < ::T::Struct
   end
 end
 
+# Extracts the implicit constant reference from an active record association
+class Packwerk::AssociationInspector
+  include ::Packwerk::ConstantNameInspector
+
+  sig do
+    params(
+      inflector: T.class_of(ActiveSupport::Inflector),
+      custom_associations: T.any(T::Array[::Symbol], T::Set[::Symbol])
+    ).void
+  end
+  def initialize(inflector:, custom_associations: T.unsafe(nil)); end
+
+  sig { override.params(node: ::AST::Node, ancestors: T::Array[::AST::Node]).returns(T.nilable(::String)) }
+  def constant_name_from_node(node, ancestors:); end
+
+  private
+
+  sig { params(node: ::AST::Node).returns(T::Boolean) }
+  def association?(node); end
+
+  sig { params(arguments: T::Array[::AST::Node]).returns(T.nilable(T.any(::String, ::Symbol))) }
+  def association_name(arguments); end
+
+  sig { params(arguments: T::Array[::AST::Node]).returns(T.nilable(::AST::Node)) }
+  def custom_class_name(arguments); end
+end
+
 Packwerk::AssociationInspector::CustomAssociations = T.type_alias { T.any(T::Array[::Symbol], T::Set[::Symbol]) }
 Packwerk::AssociationInspector::RAILS_ASSOCIATIONS = T.let(T.unsafe(nil), Set)
 
@@ -170,8 +213,6 @@ class Packwerk::Cache
   def with_cache(file_path, &block); end
 end
 
-Packwerk::Cache::CACHE_SHAPE = T.type_alias { T::Hash[::String, ::Packwerk::Cache::CacheContents] }
-
 class Packwerk::Cache::CacheContents < ::T::Struct
   const :file_contents_digest, ::String
   const :unresolved_references, T::Array[::Packwerk::UnresolvedReference]
@@ -187,6 +228,9 @@ class Packwerk::Cache::CacheContents < ::T::Struct
   end
 end
 
+Packwerk::Cache::CacheShape = T.type_alias { T::Hash[::String, ::Packwerk::Cache::CacheContents] }
+
+# A command-line interface to Packwerk.
 class Packwerk::Cli
   sig do
     params(
@@ -211,12 +255,7 @@ class Packwerk::Cli
   sig { returns(::Packwerk::ApplicationValidator) }
   def checker; end
 
-  sig do
-    params(
-      relative_file_paths: T::Array[::String],
-      ignore_nested_packages: T::Boolean
-    ).returns(T::Array[::String])
-  end
+  sig { params(relative_file_paths: T::Array[::String], ignore_nested_packages: T::Boolean).returns(T::Set[::String]) }
   def fetch_files_to_process(relative_file_paths, ignore_nested_packages); end
 
   sig { returns(T::Boolean) }
@@ -239,20 +278,40 @@ class Packwerk::Cli
 end
 
 class Packwerk::Configuration
+  # @return [Configuration] a new instance of Configuration
   def initialize(configs = T.unsafe(nil), config_path: T.unsafe(nil)); end
 
+  # Returns the value of attribute cache_directory.
   def cache_directory; end
+
+  # @return [Boolean]
   def cache_enabled?; end
+
+  # Returns the value of attribute config_path.
   def config_path; end
+
+  # Returns the value of attribute custom_associations.
   def custom_associations; end
+
+  # Returns the value of attribute exclude.
   def exclude; end
+
+  # Returns the value of attribute include.
   def include; end
+
   def load_paths; end
+
+  # Returns the value of attribute package_paths.
   def package_paths; end
+
+  # @return [Boolean]
   def parallel?; end
+
+  # Returns the value of attribute root_path.
   def root_path; end
 
   class << self
+    # @raise [ArgumentError]
     def from_path(path = T.unsafe(nil)); end
 
     private
@@ -265,10 +324,41 @@ Packwerk::Configuration::DEFAULT_CONFIG_PATH = T.let(T.unsafe(nil), String)
 Packwerk::Configuration::DEFAULT_EXCLUDE_GLOBS = T.let(T.unsafe(nil), Array)
 Packwerk::Configuration::DEFAULT_INCLUDE_GLOBS = T.let(T.unsafe(nil), Array)
 
+# Extracts a constant name from an AST node of type :const
+class Packwerk::ConstNodeInspector
+  include ::Packwerk::ConstantNameInspector
+
+  sig { override.params(node: ::AST::Node, ancestors: T::Array[::AST::Node]).returns(T.nilable(::String)) }
+  def constant_name_from_node(node, ancestors:); end
+
+  private
+
+  sig { params(node: ::AST::Node, parent: ::AST::Node).returns(T.nilable(T::Boolean)) }
+  def constant_in_module_or_class_definition?(node, parent:); end
+
+  sig { params(ancestors: T::Array[::AST::Node]).returns(::String) }
+  def fully_qualify_constant(ancestors); end
+
+  sig { params(parent: T.nilable(::AST::Node)).returns(T::Boolean) }
+  def root_constant?(parent); end
+end
+
+# Get information about unresolved constants without loading the application code.
+# Information gathered: Fully qualified name, path to file containing the definition, package,
+# and visibility (public/private to the package).
+#
+# The implementation makes a few assumptions about the code base:
+# - `Something::SomeOtherThing` is defined in a path of either `something/some_other_thing.rb` or `something.rb`,
+#   relative to the load path. Rails' `zeitwerk` autoloader makes the same assumption.
+# - It is OK to not always infer the exact file defining the constant. For example, when a constant is inherited, we
+#   have no way of inferring the file it is defined in. You could argue though that inheritance means that another
+#   constant with the same name exists in the inheriting class, and this view is sufficient for all our use cases.
 class Packwerk::ConstantDiscovery
   sig { params(constant_resolver: ::ConstantResolver, packages: Packwerk::PackageSet).void }
   def initialize(constant_resolver:, packages:); end
 
+  # Analyze a constant via its name.
+  # If the constant is unresolved, we need the current namespace path to correctly infer its full name
   sig do
     params(
       const_name: ::String,
@@ -277,17 +367,48 @@ class Packwerk::ConstantDiscovery
   end
   def context_for(const_name, current_namespace_path: T.unsafe(nil)); end
 
+  # Get the package that owns a given file path.
   sig { params(path: ::String).returns(::Packwerk::Package) }
   def package_from_path(path); end
 end
 
 class Packwerk::ConstantDiscovery::ConstantContext < ::Struct
+  # Returns the value of attribute location
+  #
+  # @return [Object] the current value of location
   def location; end
+
+  # Sets the attribute location
+  #
+  # @param value [Object] the value to set the attribute location to.
+  # @return [Object] the newly set value
   def location=(_); end
+
+  # Returns the value of attribute name
+  #
+  # @return [Object] the current value of name
   def name; end
+
+  # Sets the attribute name
+  #
+  # @param value [Object] the value to set the attribute name to.
+  # @return [Object] the newly set value
   def name=(_); end
+
+  # Returns the value of attribute package
+  #
+  # @return [Object] the current value of package
   def package; end
+
+  # Sets the attribute package
+  #
+  # @param value [Object] the value to set the attribute package to.
+  # @return [Object] the newly set value
   def package=(_); end
+
+  # Returns the value of attribute public?
+  #
+  # @return [Object] the current value of public?
   def public?; end
 
   class << self
@@ -296,6 +417,17 @@ class Packwerk::ConstantDiscovery::ConstantContext < ::Struct
     def members; end
     def new(*_arg0); end
   end
+end
+
+# An interface describing an object that can extract a constant name from an AST node.
+#
+# @abstract Subclasses must implement the `abstract` methods below.
+module Packwerk::ConstantNameInspector
+  interface!
+
+  # @abstract
+  sig { abstract.params(node: ::AST::Node, ancestors: T::Array[::AST::Node]).returns(T.nilable(::String)) }
+  def constant_name_from_node(node, ancestors:); end
 end
 
 class Packwerk::Debug
@@ -318,8 +450,8 @@ class Packwerk::DeprecatedReferences
   sig { params(reference: ::Packwerk::Reference, violation_type: ::Packwerk::ViolationType).returns(T::Boolean) }
   def listed?(reference, violation_type:); end
 
-  sig { returns(T::Boolean) }
-  def stale_violations?; end
+  sig { params(for_files: T::Set[::String]).returns(T::Boolean) }
+  def stale_violations?(for_files); end
 
   private
 
@@ -333,7 +465,41 @@ class Packwerk::DeprecatedReferences
   def prepare_entries_for_dump; end
 end
 
-Packwerk::DeprecatedReferences::ENTRIES_TYPE = T.type_alias { T::Hash[::String, T.untyped] }
+Packwerk::DeprecatedReferences::EntriesType = T.type_alias { T::Hash[::String, T.untyped] }
+
+class Packwerk::FileProcessor
+  sig do
+    params(
+      node_processor_factory: ::Packwerk::NodeProcessorFactory,
+      cache: ::Packwerk::Cache,
+      parser_factory: T.nilable(::Packwerk::Parsers::Factory)
+    ).void
+  end
+  def initialize(node_processor_factory:, cache:, parser_factory: T.unsafe(nil)); end
+
+  sig { params(relative_file: ::String).returns(::Packwerk::FileProcessor::ProcessedFile) }
+  def call(relative_file); end
+
+  private
+
+  sig { params(relative_file: ::String, parser: ::Packwerk::Parsers::ParserInterface).returns(T.untyped) }
+  def parse_into_ast(relative_file, parser); end
+
+  sig { params(file_path: ::String).returns(T.nilable(::Packwerk::Parsers::ParserInterface)) }
+  def parser_for(file_path); end
+
+  sig { params(node: ::Parser::AST::Node, relative_file: ::String).returns(T::Array[::Packwerk::UnresolvedReference]) }
+  def references_from_ast(node, relative_file); end
+end
+
+class Packwerk::FileProcessor::ProcessedFile < ::T::Struct
+  const :offenses, T::Array[::Packwerk::Offense], default: T.unsafe(nil)
+  const :unresolved_references, T::Array[::Packwerk::UnresolvedReference], default: T.unsafe(nil)
+
+  class << self
+    def inherited(s); end
+  end
+end
 
 class Packwerk::FileProcessor::UnknownFileTypeResult < ::Packwerk::Offense
   sig { params(file: ::String).void }
@@ -350,25 +516,25 @@ class Packwerk::FilesForProcessing
   end
   def initialize(relative_file_paths, configuration, ignore_nested_packages); end
 
-  sig { returns(T::Array[::String]) }
+  sig { returns(T::Set[::String]) }
   def files; end
 
   private
 
-  sig { params(relative_globs: T::Array[::String]).returns(T::Array[::String]) }
-  def absolute_files_for_globs(relative_globs); end
-
-  sig { returns(T::Array[::String]) }
+  sig { returns(T::Set[::String]) }
   def configured_excluded_files; end
 
-  sig { returns(T::Array[::String]) }
+  sig { returns(T::Set[::String]) }
   def configured_included_files; end
 
-  sig { returns(T::Array[::String]) }
+  sig { returns(T::Set[::String]) }
   def custom_files; end
 
-  sig { params(absolute_file_path: ::String).returns(T::Array[::String]) }
-  def custom_included_files(absolute_file_path); end
+  sig { params(relative_file_path: ::String).returns(T::Set[::String]) }
+  def custom_included_files(relative_file_path); end
+
+  sig { params(relative_globs: T::Array[::String]).returns(T::Set[::String]) }
+  def relative_files_for_globs(relative_globs); end
 
   class << self
     sig do
@@ -376,13 +542,16 @@ class Packwerk::FilesForProcessing
         relative_file_paths: T::Array[::String],
         configuration: ::Packwerk::Configuration,
         ignore_nested_packages: T::Boolean
-      ).returns(T::Array[::String])
+      ).returns(T::Set[::String])
     end
     def fetch(relative_file_paths:, configuration:, ignore_nested_packages: T.unsafe(nil)); end
   end
 end
 
+Packwerk::FilesForProcessing::RelativeFileSet = T.type_alias { T::Set[::String] }
+
 module Packwerk::Formatters
+  extend ::ActiveSupport::Autoload
 end
 
 class Packwerk::Formatters::OffensesFormatter
@@ -394,8 +563,14 @@ class Packwerk::Formatters::OffensesFormatter
   sig { override.params(offenses: T::Array[T.nilable(::Packwerk::Offense)]).returns(::String) }
   def show_offenses(offenses); end
 
-  sig { override.params(offense_collection: ::Packwerk::OffenseCollection).returns(::String) }
-  def show_stale_violations(offense_collection); end
+  sig do
+    override
+      .params(
+        offense_collection: ::Packwerk::OffenseCollection,
+        fileset: T::Set[::String]
+      ).returns(::String)
+  end
+  def show_stale_violations(offense_collection, fileset); end
 
   private
 
@@ -415,10 +590,11 @@ class Packwerk::Formatters::ProgressFormatter
   def mark_as_failed; end
   def mark_as_inspected; end
   def started(target_files); end
-  def started_validation; end
+  def started_validation(&block); end
 end
 
 module Packwerk::Generators
+  extend ::ActiveSupport::Autoload
 end
 
 class Packwerk::Generators::ConfigurationFile
@@ -441,6 +617,7 @@ end
 Packwerk::Generators::ConfigurationFile::CONFIGURATION_TEMPLATE_FILE_PATH = T.let(T.unsafe(nil), String)
 
 class Packwerk::Generators::RootPackage
+  # @return [RootPackage] a new instance of RootPackage
   def initialize(root:, out: T.unsafe(nil)); end
 
   sig { returns(T::Boolean) }
@@ -451,10 +628,15 @@ class Packwerk::Generators::RootPackage
   end
 end
 
+# A general implementation of a graph data structure with the ability to check for - and list - cycles.
 class Packwerk::Graph
+  # @param edges [Array<Array>] The edges of the graph; An edge being represented as an Array of two nodes.
+  # @return [Graph] a new instance of Graph
   def initialize(*edges); end
 
+  # @return [Boolean]
   def acyclic?; end
+
   def cycles; end
 
   private
@@ -466,13 +648,29 @@ class Packwerk::Graph
   def visit(node, visited_nodes: T.unsafe(nil), path: T.unsafe(nil)); end
 end
 
-module Packwerk::Node
-end
+class Packwerk::Node; end
 
 class Packwerk::Node::Location < ::Struct
+  # Returns the value of attribute column
+  #
+  # @return [Object] the current value of column
   def column; end
+
+  # Sets the attribute column
+  #
+  # @param value [Object] the value to set the attribute column to.
+  # @return [Object] the newly set value
   def column=(_); end
+
+  # Returns the value of attribute line
+  #
+  # @return [Object] the current value of line
   def line; end
+
+  # Sets the attribute line
+  #
+  # @param value [Object] the value to set the attribute line to.
+  # @return [Object] the newly set value
   def line=(_); end
 
   class << self
@@ -483,11 +681,146 @@ class Packwerk::Node::Location < ::Struct
   end
 end
 
-class Packwerk::Node::TypeError < ::ArgumentError; end
+# Convenience methods for working with Parser::AST::Node nodes.
+module Packwerk::NodeHelpers
+  class << self
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def class?(node); end
 
-class Packwerk::NodeProcessor
+    sig { params(class_or_module_node: ::AST::Node).returns(::String) }
+    def class_or_module_name(class_or_module_node); end
+
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def constant?(node); end
+
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def constant_assignment?(node); end
+
+    sig { params(constant_node: ::AST::Node).returns(::String) }
+    def constant_name(constant_node); end
+
+    sig { params(node: ::AST::Node).returns(T.untyped) }
+    def each_child(node); end
+
+    sig { params(starting_node: ::AST::Node, ancestors: T::Array[::AST::Node]).returns(T::Array[::String]) }
+    def enclosing_namespace_path(starting_node, ancestors:); end
+
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def hash?(node); end
+
+    sig { params(string_or_symbol_node: ::AST::Node).returns(T.any(::String, ::Symbol)) }
+    def literal_value(string_or_symbol_node); end
+
+    sig { params(node: ::Parser::AST::Node).returns(::Packwerk::Node::Location) }
+    def location(node); end
+
+    # @raise [TypeError]
+    sig { params(method_call_node: ::AST::Node).returns(T::Array[::AST::Node]) }
+    def method_arguments(method_call_node); end
+
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def method_call?(node); end
+
+    # @raise [TypeError]
+    sig { params(method_call_node: ::AST::Node).returns(::Symbol) }
+    def method_name(method_call_node); end
+
+    sig { params(node: ::AST::Node).returns(T.nilable(::String)) }
+    def module_name_from_definition(node); end
+
+    sig { params(node: ::Parser::AST::Node).returns(T.nilable(::Packwerk::Node::Location)) }
+    def name_location(node); end
+
+    # @raise [TypeError]
+    sig { params(class_node: ::AST::Node).returns(T.nilable(::AST::Node)) }
+    def parent_class(class_node); end
+
+    sig { params(ancestors: T::Array[::AST::Node]).returns(::String) }
+    def parent_module_name(ancestors:); end
+
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def string?(node); end
+
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def symbol?(node); end
+
+    # @raise [TypeError]
+    sig { params(hash_node: ::AST::Node, key: ::Symbol).returns(T.untyped) }
+    def value_from_hash(hash_node, key); end
+
+    private
+
+    sig { params(node: T.nilable(::AST::Node)).returns(T::Boolean) }
+    def dynamic_class_creation?(node); end
+
+    # @raise [TypeError]
+    sig { params(hash_pair_node: ::AST::Node).returns(T.untyped) }
+    def hash_pair_key(hash_pair_node); end
+
+    # @raise [TypeError]
+    sig { params(hash_pair_node: ::AST::Node).returns(T.untyped) }
+    def hash_pair_value(hash_pair_node); end
+
+    # @raise [TypeError]
+    sig { params(hash_node: ::AST::Node).returns(T::Array[::AST::Node]) }
+    def hash_pairs(hash_node); end
+
+    # @raise [TypeError]
+    sig { params(block_node: ::AST::Node).returns(::AST::Node) }
+    def method_call_node(block_node); end
+
+    sig { params(node: ::AST::Node).returns(T::Boolean) }
+    def module_creation?(node); end
+
+    sig { params(node: ::AST::Node).returns(T.nilable(::String)) }
+    def name_from_block_definition(node); end
+
+    sig { params(node: ::AST::Node).returns(T.nilable(::String)) }
+    def name_part_from_definition(node); end
+
+    sig { params(method_call_or_block_node: ::AST::Node).returns(T.nilable(::AST::Node)) }
+    def receiver(method_call_or_block_node); end
+
+    sig { params(node: ::AST::Node).returns(::Symbol) }
+    def type_of(node); end
+  end
 end
 
+class Packwerk::NodeHelpers::TypeError < ::ArgumentError; end
+
+# Processes a single node in an abstract syntax tree (AST) using the provided checkers.
+class Packwerk::NodeProcessor
+  sig { params(reference_extractor: ::Packwerk::ReferenceExtractor, relative_file: ::String).void }
+  def initialize(reference_extractor:, relative_file:); end
+
+  sig do
+    params(
+      node: ::Parser::AST::Node,
+      ancestors: T::Array[::Parser::AST::Node]
+    ).returns(T.nilable(::Packwerk::UnresolvedReference))
+  end
+  def call(node, ancestors); end
+end
+
+class Packwerk::NodeProcessorFactory < ::T::Struct
+  const :constant_name_inspectors, T::Array[::Packwerk::ConstantNameInspector]
+  const :context_provider, ::Packwerk::ConstantDiscovery
+  const :root_path, ::String
+
+  sig { params(relative_file: ::String, node: ::AST::Node).returns(::Packwerk::NodeProcessor) }
+  def for(relative_file:, node:); end
+
+  private
+
+  sig { params(node: ::AST::Node).returns(::Packwerk::ReferenceExtractor) }
+  def reference_extractor(node:); end
+
+  class << self
+    def inherited(s); end
+  end
+end
+
+# Visits all nodes of an AST, processing them using a given node processor.
 class Packwerk::NodeVisitor
   sig { params(node_processor: ::Packwerk::NodeProcessor).void }
   def initialize(node_processor:); end
@@ -539,8 +872,8 @@ class Packwerk::OffenseCollection
   sig { returns(T::Array[::Packwerk::Offense]) }
   def outstanding_offenses; end
 
-  sig { returns(T::Boolean) }
-  def stale_violations?; end
+  sig { params(for_files: T::Set[::String]).returns(T::Boolean) }
+  def stale_violations?(for_files); end
 
   private
 
@@ -551,32 +884,47 @@ class Packwerk::OffenseCollection
   def deprecated_references_for(package); end
 end
 
+# @abstract Subclasses must implement the `abstract` methods below.
 module Packwerk::OffensesFormatter
   interface!
 
+  # @abstract
   sig { abstract.params(offenses: T::Array[T.nilable(::Packwerk::Offense)]).returns(::String) }
   def show_offenses(offenses); end
 
-  sig { abstract.params(offense_collection: ::Packwerk::OffenseCollection).returns(::String) }
-  def show_stale_violations(offense_collection); end
+  # @abstract
+  sig do
+    abstract
+      .params(
+        offense_collection: ::Packwerk::OffenseCollection,
+        for_files: T::Set[::String]
+      ).returns(::String)
+  end
+  def show_stale_violations(offense_collection, for_files); end
 end
 
+# @abstract Subclasses must implement the `abstract` methods below.
 module Packwerk::OutputStyle
   interface!
 
+  # @abstract
   sig { abstract.returns(::String) }
   def error; end
 
+  # @abstract
   sig { abstract.returns(::String) }
   def filename; end
 
+  # @abstract
   sig { abstract.returns(::String) }
   def reset; end
 end
 
 module Packwerk::OutputStyles
+  extend ::ActiveSupport::Autoload
 end
 
+# See https://en.wikipedia.org/wiki/ANSI_escape_code#3/4_bit for ANSI escape colour codes
 class Packwerk::OutputStyles::Coloured
   include ::Packwerk::OutputStyle
 
@@ -603,6 +951,9 @@ class Packwerk::OutputStyles::Plain
   def reset; end
 end
 
+# The basic unit of modularity for packwerk; a folder that has been declared to define a package.
+# The package contains all constants defined in files in this folder and all subfolders that are not packages
+# themselves.
 class Packwerk::Package
   include ::Comparable
 
@@ -654,11 +1005,12 @@ end
 
 Packwerk::Package::ROOT_PACKAGE_NAME = T.let(T.unsafe(nil), String)
 
+# A set of {Packwerk::Package}s as well as methods to parse packages from the filesystem.
 class Packwerk::PackageSet
   extend T::Generic
   include ::Enumerable
 
-  Elem = type_member(fixed: Packwerk::Package)
+  Elem = type_member { { fixed: Packwerk::Package } }
 
   sig { params(packages: T::Array[::Packwerk::Package]).void }
   def initialize(packages); end
@@ -708,13 +1060,13 @@ Packwerk::PackageSet::PACKAGE_CONFIG_FILENAME = T.let(T.unsafe(nil), String)
 class Packwerk::ParseRun
   sig do
     params(
-      absolute_files: T::Array[::String],
+      relative_file_set: T::Set[::String],
       configuration: ::Packwerk::Configuration,
       progress_formatter: ::Packwerk::Formatters::ProgressFormatter,
       offenses_formatter: ::Packwerk::OffensesFormatter
     ).void
   end
-  def initialize(absolute_files:, configuration:, progress_formatter: T.unsafe(nil), offenses_formatter: T.unsafe(nil)); end
+  def initialize(relative_file_set:, configuration:, progress_formatter: T.unsafe(nil), offenses_formatter: T.unsafe(nil)); end
 
   sig { returns(::Packwerk::Result) }
   def check; end
@@ -743,9 +1095,12 @@ end
 
 Packwerk::ParseRun::ProcessFileProc = T.type_alias { T.proc.params(path: ::String).returns(T::Array[::Packwerk::Offense]) }
 
+# A collection of constant definitions parsed from an Abstract Syntax Tree (AST).
 class Packwerk::ParsedConstantDefinitions
+  # @return [ParsedConstantDefinitions] a new instance of ParsedConstantDefinitions
   def initialize(root_node:); end
 
+  # @return [Boolean]
   def local_reference?(constant_name, location: T.unsafe(nil), namespace_path: T.unsafe(nil)); end
 
   private
@@ -754,6 +1109,7 @@ class Packwerk::ParsedConstantDefinitions
   def collect_local_definitions_from_root(node, current_namespace_path = T.unsafe(nil)); end
 
   class << self
+    # What fully qualified constants can this constant refer to in this context?
     def reference_qualifications(constant_name, namespace_path:); end
   end
 end
@@ -763,6 +1119,7 @@ module Packwerk::Parsers; end
 class Packwerk::Parsers::Erb
   include ::Packwerk::Parsers::ParserInterface
 
+  # @return [Erb] a new instance of Erb
   def initialize(parser_class: T.unsafe(nil), ruby_parser: T.unsafe(nil)); end
 
   def call(io:, file_path: T.unsafe(nil)); end
@@ -770,7 +1127,9 @@ class Packwerk::Parsers::Erb
 
   private
 
-  def code_nodes(node); end
+  # @yield [node]
+  def code_nodes(node, &block); end
+
   def to_ruby_ast(erb_ast, file_path); end
 end
 
@@ -789,16 +1148,22 @@ Packwerk::Parsers::Factory::ERB_REGEX = T.let(T.unsafe(nil), Regexp)
 Packwerk::Parsers::Factory::RUBY_REGEX = T.let(T.unsafe(nil), Regexp)
 
 class Packwerk::Parsers::ParseError < ::StandardError
+  # @return [ParseError] a new instance of ParseError
   def initialize(result); end
 
+  # Returns the value of attribute result.
   def result; end
 end
 
 class Packwerk::Parsers::ParseResult < ::Packwerk::Offense; end
 
+# @abstract Subclasses must implement the `abstract` methods below.
 module Packwerk::Parsers::ParserInterface
+  requires_ancestor { Kernel }
+
   interface!
 
+  # @abstract
   sig { abstract.params(io: ::File, file_path: ::String).returns(T.untyped) }
   def call(io:, file_path:); end
 end
@@ -806,21 +1171,67 @@ end
 class Packwerk::Parsers::Ruby
   include ::Packwerk::Parsers::ParserInterface
 
+  # @return [Ruby] a new instance of Ruby
   def initialize(parser_class: T.unsafe(nil)); end
 
   def call(io:, file_path: T.unsafe(nil)); end
 end
 
+class Packwerk::Parsers::Ruby::RaiseExceptionsParser < ::Parser::Ruby27
+  # @return [RaiseExceptionsParser] a new instance of RaiseExceptionsParser
+  def initialize(builder); end
+end
+
+class Packwerk::Parsers::Ruby::TolerateInvalidUtf8Builder < ::Parser::Builders::Default
+  def string_value(token); end
+end
+
 Packwerk::PathSpec = T.type_alias { T.any(::String, T::Array[::String]) }
 
+# A reference from a file in one package to a constant that may be defined in a different package.
 class Packwerk::Reference < ::Struct
+  # Returns the value of attribute constant
+  #
+  # @return [Object] the current value of constant
   def constant; end
+
+  # Sets the attribute constant
+  #
+  # @param value [Object] the value to set the attribute constant to.
+  # @return [Object] the newly set value
   def constant=(_); end
+
+  # Returns the value of attribute relative_path
+  #
+  # @return [Object] the current value of relative_path
   def relative_path; end
+
+  # Sets the attribute relative_path
+  #
+  # @param value [Object] the value to set the attribute relative_path to.
+  # @return [Object] the newly set value
   def relative_path=(_); end
+
+  # Returns the value of attribute source_location
+  #
+  # @return [Object] the current value of source_location
   def source_location; end
+
+  # Sets the attribute source_location
+  #
+  # @param value [Object] the value to set the attribute source_location to.
+  # @return [Object] the newly set value
   def source_location=(_); end
+
+  # Returns the value of attribute source_package
+  #
+  # @return [Object] the current value of source_package
   def source_package; end
+
+  # Sets the attribute source_package
+  #
+  # @param value [Object] the value to set the attribute source_package to.
+  # @return [Object] the newly set value
   def source_package=(_); end
 
   class << self
@@ -832,36 +1243,56 @@ class Packwerk::Reference < ::Struct
 end
 
 module Packwerk::ReferenceChecking
+  extend ::ActiveSupport::Autoload
 end
 
 module Packwerk::ReferenceChecking::Checkers
+  extend ::ActiveSupport::Autoload
 end
 
+# @abstract Subclasses must implement the `abstract` methods below.
 module Packwerk::ReferenceChecking::Checkers::Checker
-  interface!
+  abstract!
 
+  # @abstract
   sig { abstract.params(reference: ::Packwerk::Reference).returns(T::Boolean) }
   def invalid_reference?(reference); end
 
+  # @abstract
+  sig { abstract.params(reference: ::Packwerk::Reference).returns(::String) }
+  def message(reference); end
+
+  sig { params(reference: ::Packwerk::Reference).returns(::String) }
+  def standard_help_message(reference); end
+
+  # @abstract
   sig { abstract.returns(::Packwerk::ViolationType) }
   def violation_type; end
 end
 
+# Checks whether a given reference conforms to the configured graph of dependencies.
 class Packwerk::ReferenceChecking::Checkers::DependencyChecker
   include ::Packwerk::ReferenceChecking::Checkers::Checker
 
   sig { override.params(reference: ::Packwerk::Reference).returns(T::Boolean) }
   def invalid_reference?(reference); end
 
+  sig { override.params(reference: ::Packwerk::Reference).returns(::String) }
+  def message(reference); end
+
   sig { override.returns(::Packwerk::ViolationType) }
   def violation_type; end
 end
 
+# Checks whether a given reference references a private constant of another package.
 class Packwerk::ReferenceChecking::Checkers::PrivacyChecker
   include ::Packwerk::ReferenceChecking::Checkers::Checker
 
   sig { override.params(reference: ::Packwerk::Reference).returns(T::Boolean) }
   def invalid_reference?(reference); end
+
+  sig { override.params(reference: ::Packwerk::Reference).returns(::String) }
+  def message(reference); end
 
   sig { override.returns(::Packwerk::ViolationType) }
   def violation_type; end
@@ -884,33 +1315,73 @@ class Packwerk::ReferenceChecking::ReferenceChecker
   sig { params(checkers: T::Array[::Packwerk::ReferenceChecking::Checkers::Checker]).void }
   def initialize(checkers); end
 
-  sig { params(reference: T.any(::Packwerk::Offense, ::Packwerk::Reference)).returns(T::Array[::Packwerk::Offense]) }
+  sig { params(reference: ::Packwerk::Reference).returns(T::Array[::Packwerk::Offense]) }
   def call(reference); end
 end
 
+# Extracts a possible constant reference from a given AST node.
 class Packwerk::ReferenceExtractor
+  sig do
+    params(
+      constant_name_inspectors: T::Array[::Packwerk::ConstantNameInspector],
+      root_node: ::AST::Node,
+      root_path: ::String
+    ).void
+  end
+  def initialize(constant_name_inspectors:, root_node:, root_path:); end
+
+  sig do
+    params(
+      node: ::Parser::AST::Node,
+      ancestors: T::Array[::Parser::AST::Node],
+      relative_file: ::String
+    ).returns(T.nilable(::Packwerk::UnresolvedReference))
+  end
+  def reference_from_node(node, ancestors:, relative_file:); end
+
+  private
+
+  # @return [Boolean]
+  def local_reference?(constant_name, name_location, namespace_path); end
+
+  sig do
+    params(
+      constant_name: ::String,
+      node: ::Parser::AST::Node,
+      ancestors: T::Array[::Parser::AST::Node],
+      relative_file: ::String
+    ).returns(T.nilable(::Packwerk::UnresolvedReference))
+  end
+  def reference_from_constant(constant_name, node:, ancestors:, relative_file:); end
+
+  class << self
+    sig do
+      params(
+        unresolved_references: T::Array[::Packwerk::UnresolvedReference],
+        context_provider: ::Packwerk::ConstantDiscovery
+      ).returns(T::Array[::Packwerk::Reference])
+    end
+    def get_fully_qualified_references_from(unresolved_references, context_provider); end
+  end
 end
 
+# An offense related to a {Packwerk::Reference}.
 class Packwerk::ReferenceOffense < ::Packwerk::Offense
   sig do
     params(
       reference: ::Packwerk::Reference,
       violation_type: ::Packwerk::ViolationType,
+      message: ::String,
       location: T.nilable(::Packwerk::Node::Location)
     ).void
   end
-  def initialize(reference:, violation_type:, location: T.unsafe(nil)); end
+  def initialize(reference:, violation_type:, message:, location: T.unsafe(nil)); end
 
   sig { returns(::Packwerk::Reference) }
   def reference; end
 
   sig { returns(::Packwerk::ViolationType) }
   def violation_type; end
-
-  private
-
-  sig { params(reference: ::Packwerk::Reference, violation_type: ::Packwerk::ViolationType).returns(::String) }
-  def build_message(reference, violation_type); end
 end
 
 class Packwerk::Result < ::T::Struct
@@ -922,19 +1393,101 @@ class Packwerk::Result < ::T::Struct
   end
 end
 
+# Holds the context of a Packwerk run across multiple files.
 class Packwerk::RunContext
+  sig do
+    params(
+      root_path: ::String,
+      load_paths: T::Hash[::String, ::Module],
+      inflector: T.class_of(ActiveSupport::Inflector),
+      cache_directory: ::Pathname,
+      config_path: T.nilable(::String),
+      package_paths: T.nilable(T.any(::String, T::Array[::String])),
+      custom_associations: T.any(T::Array[::Symbol], T::Set[::Symbol]),
+      checkers: T::Array[::Packwerk::ReferenceChecking::Checkers::Checker],
+      cache_enabled: T::Boolean
+    ).void
+  end
+  def initialize(root_path:, load_paths:, inflector:, cache_directory:, config_path: T.unsafe(nil), package_paths: T.unsafe(nil), custom_associations: T.unsafe(nil), checkers: T.unsafe(nil), cache_enabled: T.unsafe(nil)); end
+
+  sig { params(relative_file: ::String).returns(T::Array[::Packwerk::Offense]) }
+  def process_file(relative_file:); end
+
+  private
+
+  sig { returns(T::Array[::Packwerk::ConstantNameInspector]) }
+  def constant_name_inspectors; end
+
+  sig { returns(::Packwerk::ConstantDiscovery) }
+  def context_provider; end
+
+  sig { returns(::Packwerk::FileProcessor) }
+  def file_processor; end
+
+  sig { returns(::Packwerk::NodeProcessorFactory) }
+  def node_processor_factory; end
+
+  sig { returns(Packwerk::PackageSet) }
+  def package_set; end
+
+  sig { returns(::ConstantResolver) }
+  def resolver; end
+
+  class << self
+    sig { params(configuration: ::Packwerk::Configuration).returns(::Packwerk::RunContext) }
+    def from_configuration(configuration); end
+  end
 end
 
 Packwerk::RunContext::DEFAULT_CHECKERS = T.let(T.unsafe(nil), Array)
 
+# An unresolved reference from a file in one package to a constant that may be defined in a different package.
+# Unresolved means that we know how it's referred to in the file,
+# and we have enough context on that reference to figure out the fully qualified reference such that we
+# can produce a Reference in a separate pass. However, we have not yet resolved it to its fully qualified version.
 class Packwerk::UnresolvedReference < ::Struct
+  # Returns the value of attribute constant_name
+  #
+  # @return [Object] the current value of constant_name
   def constant_name; end
+
+  # Sets the attribute constant_name
+  #
+  # @param value [Object] the value to set the attribute constant_name to.
+  # @return [Object] the newly set value
   def constant_name=(_); end
+
+  # Returns the value of attribute namespace_path
+  #
+  # @return [Object] the current value of namespace_path
   def namespace_path; end
+
+  # Sets the attribute namespace_path
+  #
+  # @param value [Object] the value to set the attribute namespace_path to.
+  # @return [Object] the newly set value
   def namespace_path=(_); end
+
+  # Returns the value of attribute relative_path
+  #
+  # @return [Object] the current value of relative_path
   def relative_path; end
+
+  # Sets the attribute relative_path
+  #
+  # @param value [Object] the value to set the attribute relative_path to.
+  # @return [Object] the newly set value
   def relative_path=(_); end
+
+  # Returns the value of attribute source_location
+  #
+  # @return [Object] the current value of source_location
   def source_location; end
+
+  # Sets the attribute source_location
+  #
+  # @param value [Object] the value to set the attribute source_location to.
+  # @return [Object] the newly set value
   def source_location=(_); end
 
   class << self
