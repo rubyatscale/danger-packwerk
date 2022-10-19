@@ -214,6 +214,7 @@ GEM
       yard (>= 0.9)
 
 PLATFORMS
+  ruby
   arm64-darwin-21
 
 DEPENDENCIES
