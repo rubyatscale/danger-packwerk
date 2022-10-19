@@ -215,7 +215,6 @@ GEM
 
 PLATFORMS
   ruby
-  arm64-darwin-21
 
 DEPENDENCIES
   bundler (~> 2.0)
