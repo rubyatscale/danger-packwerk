@@ -1010,8 +1010,6 @@ class Packwerk::PackageSet
   extend T::Generic
   include ::Enumerable
 
-  Elem = type_member { { fixed: Packwerk::Package } }
-
   sig { params(packages: T::Array[::Packwerk::Package]).void }
   def initialize(packages); end
 
