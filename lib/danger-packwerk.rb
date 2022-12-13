@@ -9,4 +9,8 @@ module DangerPackwerk
 
   require 'danger-packwerk/danger_packwerk'
   require 'danger-packwerk/danger_deprecated_references_yml_changes'
+  require 'danger-packwerk/check/offenses_formatter'
+  require 'danger-packwerk/check/default_formatter'
+  require 'danger-packwerk/update/offenses_formatter'
+  require 'danger-packwerk/update/default_formatter'
 end

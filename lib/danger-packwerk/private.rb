@@ -1,7 +1,7 @@
 # typed: strict
 
 require 'danger-packwerk/private/deprecated_references'
-require 'danger-packwerk/private/default_offenses_formatter'
+require 'danger-packwerk/private/ownership_information'
 require 'constant_resolver'
 
 module DangerPackwerk

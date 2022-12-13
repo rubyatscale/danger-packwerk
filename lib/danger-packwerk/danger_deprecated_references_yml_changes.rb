@@ -17,23 +17,25 @@ module DangerPackwerk
     # Therefore we hope to capture the majority case of people making changes to code while not spamming PRs that do a big rename.
     # We set a max (rather than unlimited) to avoid GitHub rate limiting and general spam if a PR does some sort of mass rename.
     DEFAULT_MAX_COMMENTS = 5
-    AddedOffensesFormatter = T.type_alias { T.proc.params(added_violations: T::Array[BasicReferenceOffense]).returns(String) }
-    DEFAULT_ADDED_OFFENSES_FORMATTER = T.let(->(added_violations) { Private::DefaultAddedOffensesFormatter.format(added_violations) }, AddedOffensesFormatter)
     BeforeComment = T.type_alias { T.proc.params(violation_diff: ViolationDiff, changed_deprecated_references_ymls: T::Array[String]).void }
     DEFAULT_BEFORE_COMMENT = T.let(->(violation_diff, changed_deprecated_references_ymls) {}, BeforeComment)
 
     sig do
       params(
-        added_offenses_formatter: AddedOffensesFormatter,
+        offenses_formatter: T.nilable(Update::OffensesFormatter),
         before_comment: BeforeComment,
         max_comments: Integer
       ).void
     end
     def check(
-      added_offenses_formatter: DEFAULT_ADDED_OFFENSES_FORMATTER,
+      offenses_formatter: nil,
       before_comment: DEFAULT_BEFORE_COMMENT,
       max_comments: DEFAULT_MAX_COMMENTS
     )
+      offenses_formatter ||= Update::DefaultFormatter.new
+      repo_link = github.pr_json[:base][:repo][:html_url]
+      org_name = github.pr_json[:base][:repo][:owner][:login]
+
       changed_deprecated_references_ymls = (git.modified_files + git.added_files + git.deleted_files).grep(DEPRECATED_REFERENCES_PATTERN)
 
       violation_diff = get_violation_diff
@@ -51,7 +53,7 @@ module DangerPackwerk
         location = T.must(violations.first).file_location
 
         markdown(
-          added_offenses_formatter.call(violations),
+          offenses_formatter.format_offenses(violations, repo_link, org_name),
           line: location.line_number,
           file: location.file
         )

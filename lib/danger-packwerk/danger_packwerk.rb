@@ -19,8 +19,6 @@ module DangerPackwerk
     DEFAULT_MAX_COMMENTS = 15
     OnFailure = T.type_alias { T.proc.params(offenses: T::Array[Packwerk::ReferenceOffense]).void }
     DEFAULT_ON_FAILURE = T.let(->(offenses) {}, OnFailure)
-    OffensesFormatter = T.type_alias { T.proc.params(offenses: T::Array[Packwerk::ReferenceOffense]).returns(String) }
-    DEFAULT_OFFENSES_FORMATTER = T.let(->(offenses) { offenses.map(&:message).join("\n\n") }, OffensesFormatter)
     DEFAULT_FAIL = false
     DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
 
@@ -35,8 +33,8 @@ module DangerPackwerk
 
     sig do
       params(
+        offenses_formatter: T.nilable(Check::OffensesFormatter),
         max_comments: Integer,
-        offenses_formatter: OffensesFormatter,
         fail_build: T::Boolean,
         failure_message: String,
         on_failure: OnFailure,
@@ -44,13 +42,17 @@ module DangerPackwerk
       ).void
     end
     def check(
+      offenses_formatter: nil,
       max_comments: DEFAULT_MAX_COMMENTS,
-      offenses_formatter: DEFAULT_OFFENSES_FORMATTER,
       fail_build: DEFAULT_FAIL,
       failure_message: DEFAULT_FAILURE_MESSAGE,
       on_failure: DEFAULT_ON_FAILURE,
       grouping_strategy: CommentGroupingStrategy::PerConstantPerLocation
     )
+      offenses_formatter ||= Check::DefaultFormatter.new
+      repo_link = github.pr_json[:base][:repo][:html_url]
+      org_name = github.pr_json[:base][:repo][:owner][:login]
+
       # This is important because by default, Danger will leave a concantenated list of all its messages if it can't find a commentable place in the
       # diff to leave its message. This is an especially bad UX because it will be a huge wall of text not connected to the source of the issue.
       # Furthermore, dismissing these ensures that something like moving a file from pack to pack does not trigger the danger message. That is,
@@ -120,7 +122,7 @@ module DangerPackwerk
         line_number = reference_offense.location&.line
         referencing_file = reference_offense.reference.relative_path
 
-        message = offenses_formatter.call(unique_packwerk_reference_offenses)
+        message = offenses_formatter.format_offenses(unique_packwerk_reference_offenses, repo_link, org_name)
 
         markdown(message, file: referencing_file, line: line_number)
       end

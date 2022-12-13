@@ -83,11 +83,11 @@ Without any configuration, `deprecated_references_yml_changes.check` should just
 `deprecated_references_yml_changes.check` can be configured to in the following ways:
 
 ### Change the message that displays in the markdown
-The default message displayed is from `lib/danger-packwerk/private/default_offenses_formatter.rb`. To customize this this, pass in `added_offenses_formatter` to `deprecated_references_yml_changes.check` in your `Dangerfile`. Here's a simple example:
+The default message displayed is from `lib/danger-packwerk/private/default_offenses_formatter.rb`. To customize this this, pass in `offenses_formatter` to `deprecated_references_yml_changes.check` in your `Dangerfile`. Here's a simple example:
 ```ruby
 deprecated_references_yml_changes.check(
   # Offenses are a T::Array[DangerPackwerk::BasicReferenceOffense]
-  added_offenses_formatter: -> (added_offenses) do
+  offenses_formatter: -> (added_offenses) do
     "There are #{added_offenses.count} new violations this line!"
   end
 )
