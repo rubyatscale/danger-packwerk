@@ -130,20 +130,24 @@ module DangerPackwerk
         end
 
         context 'a offenses formatter is passed in' do
-          let(:added_offenses_formatter) do
-            lambda do |added_violations|
-              <<~MESSAGE
-                There are #{added_violations.count} new violations,
-                with class_names #{added_violations.map(&:class_name).uniq.sort},
-                with to_package_names #{added_violations.map(&:to_package_name).uniq.sort},
-                with types #{added_violations.map(&:type).sort},
-              MESSAGE
+          let(:offenses_formatter) do
+            Class.new do
+              include Update::OffensesFormatter
+
+              def format_offenses(added_violations, repo_link, org_name)
+                <<~MESSAGE
+                  There are #{added_violations.count} new violations,
+                  with class_names #{added_violations.map(&:class_name).uniq.sort},
+                  with to_package_names #{added_violations.map(&:to_package_name).uniq.sort},
+                  with types #{added_violations.map(&:type).sort},
+                MESSAGE
+              end
             end
           end
 
           subject do
             danger_deprecated_references_yml_changes.check(
-              added_offenses_formatter: added_offenses_formatter,
+              offenses_formatter: offenses_formatter.new,
               before_comment: lambda do |_violation_diff, changed_deprecated_references_ymls|
                 slack_notifier.notify_slack(changed_deprecated_references_ymls)
               end

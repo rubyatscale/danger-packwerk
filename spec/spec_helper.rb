@@ -83,3 +83,26 @@ def sorbet_double(stubbed_class, attr_map = {})
     allow(dbl).to receive(:is_a?) { |tested_class| stubbed_class.ancestors.include?(tested_class) }
   end
 end
+
+def write_package_yml(
+  pack_name,
+  dependencies: [],
+  enforce_dependencies: true,
+  enforce_privacy: true,
+  metadata: {},
+  owner: nil
+)
+  if owner
+    metadata['owner'] = owner
+  end
+
+  package = ParsePackwerk::Package.new(
+    name: pack_name,
+    dependencies: dependencies,
+    enforce_dependencies: enforce_dependencies,
+    enforce_privacy: enforce_privacy,
+    metadata: metadata
+  )
+
+  ParsePackwerk.write_package_yml!(package)
+end

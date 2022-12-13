@@ -1,31 +1,32 @@
 # typed: strict
 
 module DangerPackwerk
-  module Private
-    class SimpleAddedOffensesFormatter
+  module Update
+    class DefaultFormatter
       extend T::Sig
+      include OffensesFormatter
 
-      sig { params(violations: T::Array[BasicReferenceOffense]).returns(String) }
-      def self.format(violations)
-        violation = T.must(violations.first)
-        # We remove leading double colons as they feel like an implementation detail of packwerk.
-        constant_name = violation.class_name.gsub(/\A::/, '')
+      sig { override.params(offenses: T::Array[BasicReferenceOffense], repo_link: String, org_name: String).returns(String) }
+      def format_offenses(offenses, repo_link, org_name)
+        offense = T.must(offenses.first)
+        constant_name = offense.class_name.delete_prefix('::')
         link_to_docs = '[the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf)'
         disclaimer = "We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through #{link_to_docs} for other ways to resolve. "
-        pluralized_violation = violations.count > 1 ? 'these violations' : 'this violation'
+        pluralized_violation = offenses.count > 1 ? 'these violations' : 'this violation'
         request_to_add_context = "Could you add some context as a reply here about why we needed to add #{pluralized_violation}?"
+        violation_types = offenses.map(&:type)
 
-        if violations.any?(&:dependency?) && violations.any?(&:privacy?)
+        if violation_types.include?('dependency') && violation_types.include?('privacy')
           <<~MESSAGE
             Hi! It looks like the pack defining `#{constant_name}` considers this private API, and it's also not in the referencing pack's list of dependencies.
             #{disclaimer}#{request_to_add_context}
           MESSAGE
-        elsif violations.any?(&:dependency?)
+        elsif violation_types.include?('dependency')
           <<~MESSAGE
             Hi! It looks like the pack defining `#{constant_name}` is not in the referencing pack's list of dependencies.
             #{disclaimer}#{request_to_add_context}
           MESSAGE
-        else # violations.any?(&:privacy?)
+        else # violation_types.include?('privacy')
           <<~MESSAGE
             Hi! It looks like the pack defining `#{constant_name}` considers this private API.
             #{disclaimer}#{request_to_add_context}

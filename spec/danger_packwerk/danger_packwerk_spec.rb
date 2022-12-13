@@ -3,18 +3,43 @@ require 'spec_helper'
 module DangerPackwerk
   RSpec.describe DangerPackwerk do
     describe '#check' do
-      context 'using simple formatter' do
+
+      let(:load_paths) do
+        {
+          'packs/some_pack' => 'Object'
+        }
+      end
+
+      before do
+        # These paths need to exist for ConstantResolver
+        [
+          'packs/some_pack/some_class.rb',
+          'packs/some_pack/some_other_class.rb',
+          'packs/some_pack/some_file.rb',
+          'packs/some_pack/some_class_with_new_name.rb',
+          'packs/some_pack/some_class_with_old_name.rb'
+        ].each { |path| write_file(path) }
+        allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
+      end
+      
+      context 'using inputted formatter' do
         let(:packwerk) { dangerfile.packwerk }
         let(:plugin) { packwerk }
+        let(:formatter) do
+          Class.new do
+            include Check::OffensesFormatter
+
+            def format_offenses(offenses, repo_link, org_name)
+              offenses.map(&:message).join("\n\n") 
+            end
+          end
+        end
+        let(:packwerk_check) do
+          packwerk.check(offenses_formatter: formatter.new)
+        end
         let(:offenses) { [] }
         let(:files_for_packwerk) { ['packs/referencing_pack/some_file.rb'] }
         let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
-
-        let(:load_paths) do
-          {
-            'packs/some_pack' => 'Object'
-          }
-        end
 
         before do
           write_file('package.yml', <<~YML)
@@ -23,16 +48,6 @@ module DangerPackwerk
           YML
           allow_any_instance_of(Packwerk::Cli).to receive(:execute_command).with(['check', *files_for_packwerk])
           allow_any_instance_of(PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
-
-          # These paths need to exist for ConstantResolver
-          [
-            'packs/some_pack/some_class.rb',
-            'packs/some_pack/some_other_class.rb',
-            'packs/some_pack/some_file.rb',
-            'packs/some_pack/some_class_with_new_name.rb',
-            'packs/some_pack/some_class_with_old_name.rb'
-          ].each { |path| write_file(path) }
-          allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
         end
 
         let(:constant) do
@@ -71,7 +86,7 @@ module DangerPackwerk
           let(:offenses) { [sorbet_double(Packwerk::Parsers::ParseResult)] }
 
           it 'exits gracefully' do
-            packwerk.check
+            packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
@@ -84,7 +99,7 @@ module DangerPackwerk
 
           it 'leaves an inline comment helping the user figure out what to do next' do
             expect_any_instance_of(Packwerk::Cli).to_not receive(:execute_command)
-            packwerk.check
+            packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
@@ -96,7 +111,7 @@ module DangerPackwerk
           let(:offenses) { [generic_privacy_violation] }
 
           it 'leaves an inline comment helping the user figure out what to do next' do
-            packwerk.check
+            packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
@@ -115,7 +130,7 @@ module DangerPackwerk
             let(:renamed_files) { [{ before: modified_file, after: renamed_file.to_s }] }
 
             it 'leaves an inline comment helping the user figure out what to do next' do
-              packwerk.check
+              packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
@@ -133,7 +148,7 @@ module DangerPackwerk
           let(:offenses) { [generic_dependency_violation] }
 
           it 'leaves an inline comment helping the user figure out what to do next' do
-            packwerk.check
+            packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
@@ -150,7 +165,7 @@ module DangerPackwerk
           let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
 
           it 'leaves an inline comment helping the user figure out what to do next' do
-            packwerk.check
+            packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
@@ -194,7 +209,7 @@ module DangerPackwerk
               end
 
               it 'leaves one comment' do
-                packwerk.check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
                 actual_markdowns = dangerfile.status_report[:markdowns]
@@ -236,7 +251,7 @@ module DangerPackwerk
               end
 
               it 'leaves a comment for each violation' do
-                packwerk.check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
 
@@ -286,7 +301,7 @@ module DangerPackwerk
               end
 
               it 'leaves a comment for each violation' do
-                packwerk.check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
 
@@ -336,7 +351,7 @@ module DangerPackwerk
               end
 
               it 'leaves a comment for each violation' do
-                packwerk.check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
 
@@ -359,8 +374,9 @@ module DangerPackwerk
           end
 
           context 'with grouping per constant per pack' do
-            let(:run_packwerk_check) do
+            let(:packwerk_check) do
               packwerk.check(
+                offenses_formatter: formatter.new,
                 grouping_strategy: DangerPackwerk::PerConstantPerPackGrouping
               )
             end
@@ -394,7 +410,7 @@ module DangerPackwerk
               end
 
               it 'leaves one comment' do
-                run_packwerk_check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
                 actual_markdowns = dangerfile.status_report[:markdowns]
@@ -436,7 +452,7 @@ module DangerPackwerk
               end
 
               it 'leaves one comment' do
-                run_packwerk_check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
                 actual_markdowns = dangerfile.status_report[:markdowns]
@@ -478,7 +494,7 @@ module DangerPackwerk
               end
 
               it 'leaves one comment' do
-                run_packwerk_check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
                 actual_markdowns = dangerfile.status_report[:markdowns]
@@ -531,7 +547,7 @@ module DangerPackwerk
               end
 
               it 'leaves a comment for each violation' do
-                run_packwerk_check
+                packwerk_check
                 expect(dangerfile.status_report[:warnings]).to be_empty
                 expect(dangerfile.status_report[:errors]).to be_empty
 
@@ -569,7 +585,7 @@ module DangerPackwerk
 
           context 'the user has not passed in max comments' do
             it 'stops commenting after 15 comments' do
-              packwerk.check
+              packwerk_check
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
@@ -579,7 +595,7 @@ module DangerPackwerk
 
           context 'the user has passed in max comments' do
             it 'stops commenting after the user configured number of comments' do
-              packwerk.check(max_comments: 3)
+              packwerk.check(offenses_formatter: formatter.new, max_comments: 3)
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
               actual_markdowns = dangerfile.status_report[:markdowns]
@@ -588,31 +604,15 @@ module DangerPackwerk
           end
         end
 
-        context 'the user has passed in a custom offense formatter' do
-          let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
-
-          it 'leaves an inline comment helping the user figure out what to do next' do
-            packwerk.check(
-              offenses_formatter: ->(offenses) { "There are #{offenses.count} offenses!" }
-            )
-            expect(dangerfile.status_report[:warnings]).to be_empty
-            expect(dangerfile.status_report[:errors]).to be_empty
-            actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 1
-            actual_markdown = actual_markdowns.first
-            expect(actual_markdown.message).to eq 'There are 2 offenses!'
-            expect(actual_markdown.line).to eq 12
-            expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
-            expect(actual_markdown.type).to eq :markdown
-          end
-        end
-
         context 'the user has passed fail_build' do
           context 'there are offenses' do
             let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
 
             it 'fails the build' do
-              packwerk.check(fail_build: true)
+              packwerk.check(
+                offenses_formatter: formatter.new,
+                fail_build: true
+              )
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to eq(['Packwerk violations were detected! Please resolve them to unblock the build.'])
             end
@@ -622,7 +622,7 @@ module DangerPackwerk
             let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
 
             it 'fails the build' do
-              packwerk.check(fail_build: true, failure_message: 'Custom error message!')
+              packwerk.check(offenses_formatter: formatter.new, fail_build: true, failure_message: 'Custom error message!')
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to eq(['Custom error message!'])
             end
@@ -630,7 +630,7 @@ module DangerPackwerk
 
           context 'there are no offenses' do
             it 'does not fail the build' do
-              packwerk.check(fail_build: true)
+              packwerk.check(offenses_formatter: formatter.new, fail_build: true)
               expect(dangerfile.status_report[:warnings]).to be_empty
               expect(dangerfile.status_report[:errors]).to be_empty
             end
@@ -642,9 +642,12 @@ module DangerPackwerk
 
           it 'fails the build' do
             on_failure_called_message = false
-            packwerk.check(on_failure: lambda { |offenses|
-                                        on_failure_called_message = "`on_failure` called with #{offenses.count} offenses"
-                                      })
+            packwerk.check(
+              offenses_formatter: formatter.new,
+              on_failure: lambda { |offenses|
+                  on_failure_called_message = "`on_failure` called with #{offenses.count} offenses"
+              }
+            )
             expect(on_failure_called_message).to eq '`on_failure` called with 2 offenses'
           end
         end
@@ -672,7 +675,7 @@ module DangerPackwerk
           let(:offenses) { [generic_dependency_violation] }
 
           it 'does not leave an inline comment' do
-            packwerk.check
+            packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             expect(dangerfile.status_report[:markdowns]).to be_empty
@@ -681,15 +684,12 @@ module DangerPackwerk
       end
 
       context 'using default formatter' do
-        subject do
+        subject do        
           danger_packwerk.check(
-            offenses_formatter: -> (offenses) do
-              GustoPackwerk::DangerPlugins.format_packwerk_check_danger_message(offenses, 'https://github.com/Gusto/zenpayroll')
-            end,
-            on_failure: -> (_offenses) do
-              prod_infra_helper.notify_slack_once_about_file_modifications!('Packwerk violations', label: 'Packwerk violations', list: [], webhook_link: GustoPackwerk::DangerPlugins::SLACK_WEBHOOK_URL_PACKWERK_FILE_CHANGES)
-            end,
-            grouping_strategy: DangerPackwerk::DangerPackwerk::PerConstantPerPackGrouping
+            grouping_strategy: DangerPackwerk::PerConstantPerPackGrouping,
+            offenses_formatter: Check::DefaultFormatter.new(
+              custom_help_message: "Need help? Join us in #ruby-modularity or see go/packs.",
+            )
           )
         end
 
@@ -709,14 +709,29 @@ module DangerPackwerk
           end
 
           allow_any_instance_of(Packwerk::Cli).to receive(:execute_command)
-          allow(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!)
-          allow_any_instance_of(DangerPackwerk::PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
+          allow_any_instance_of(::DangerPackwerk::PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
 
-          create_product_infra_team
-          create_other_team
+          write_file('config/teams/product_infrastructure.yml', <<~YML)
+            name: Product Infrastructure Backend
+            github:
+              team: '@MyOrg/product-infrastructure'
+            slack:
+              handle: '@prod-infra-team'
+              room_for_robots: '#prod-infra'
+              room_for_humans: '#prod-infra'
+          YML
+          
+          write_file('config/teams/other_team.yml', <<~YML)
+            name: Other Team
+            github:
+              team: '@MyOrg/other-team'
+            slack:
+              handle: '@other-team'
+              room_for_robots: '#other-team'
+              room_for_humans: '#other-team'
+          YML
         end
 
-        include_context 'danger plugin'
         let(:danger_packwerk) { dangerfile.packwerk }
         let(:generic_privacy_violation) do
           sorbet_double(
@@ -748,7 +763,6 @@ module DangerPackwerk
         let(:referencing_package) { ParsePackwerk.find('packs/referencing_package') }
         let(:offenses) { [] }
         let(:plugin) { danger_packwerk }
-        let(:prod_infra_helper) { sorbet_double(DangerGustoUtilities::ProdInfraHelper, :notify_slack_once_about_file_modifications!) }
         let(:slack_package) { ParsePackwerk.find('packs/gusto_slack') }
 
         context 'when there is a new privacy violation when running packwerk check' do
@@ -765,41 +779,30 @@ module DangerPackwerk
             expected = <<~EXPECTED
               **Packwerk Violation**
               - Type: Privacy :lock:
-              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
               - Owning pack: packs/gusto_slack
-                - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+                - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
               <details><summary>Quick suggestions :bulb:</summary>
 
-              Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+              Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
               - Does the code you are writing live in the right pack?
                 - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
               - Does PrivateConstant live in the right pack?
                 - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
               - Does API in packs/gusto_slack/public support this use case?
-                - If not, can we work with [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) to create and use a public API?
+                - If not, can we work with [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) to create and use a public API?
                 - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
 
               </details>
 
-              _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+              _Need help? Join us in #ruby-modularity or see go/packs._
             EXPECTED
 
             expect(actual_markdown.message).to eq expected
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
             expect(actual_markdown.type).to eq :markdown
-          end
-
-          it 'notifies slack' do
-            expect(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!).with(
-              'Packwerk violations',
-              label: 'Packwerk violations',
-              list: [],
-              webhook_link: 'https://hooks.slack.com/services/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'.freeze
-            )
-
-            subject
           end
 
           context 'there is no owning team' do
@@ -817,24 +820,24 @@ module DangerPackwerk
               expected = <<~EXPECTED
                 **Packwerk Violation**
                 - Type: Privacy :lock:
-                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
                 - Owning pack: packs/gusto_slack
-                  - Owned by [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) (Slack: [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity))
+                  - This pack is unowned.
 
                 <details><summary>Quick suggestions :bulb:</summary>
 
-                Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+                Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
                 - Does the code you are writing live in the right pack?
                   - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
                 - Does PrivateConstant live in the right pack?
                   - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
                 - Does API in packs/gusto_slack/public support this use case?
-                  - If not, can we work with [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) to create and use a public API?
+                  - If not, can we work with the pack owner to create and use a public API?
                   - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
 
                 </details>
 
-                _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+                _Need help? Join us in #ruby-modularity or see go/packs._
               EXPECTED
 
               expect(actual_markdown.message).to eq expected
@@ -860,13 +863,13 @@ module DangerPackwerk
             expected = <<~EXPECTED
               **Packwerk Violation**
               - Type: Dependency :knot:
-              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
               - Owning pack: packs/gusto_slack
-                - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+                - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
               <details><summary>Quick suggestions :bulb:</summary>
 
-              Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+              Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
               - Does the code you are writing live in the right pack?
                 - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
               - Does PrivateConstant live in the right pack?
@@ -877,24 +880,13 @@ module DangerPackwerk
 
               </details>
 
-              _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+              _Need help? Join us in #ruby-modularity or see go/packs._
             EXPECTED
 
             expect(actual_markdown.message).to eq expected
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
             expect(actual_markdown.type).to eq :markdown
-          end
-
-          it 'notifies slack' do
-            expect(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!).with(
-              'Packwerk violations',
-              label: 'Packwerk violations',
-              list: [],
-              webhook_link: 'https://hooks.slack.com/services/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'.freeze
-            )
-
-            subject
           end
         end
 
@@ -912,13 +904,13 @@ module DangerPackwerk
             expected = <<~EXPECTED
               **Packwerk Violation**
               - Type: Privacy :lock: + Dependency :knot:
-              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
               - Owning pack: packs/gusto_slack
-                - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+                - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
               <details><summary>Quick suggestions :bulb:</summary>
 
-              Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+              Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
               - Does the code you are writing live in the right pack?
                 - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
               - Does PrivateConstant live in the right pack?
@@ -927,29 +919,18 @@ module DangerPackwerk
                 - If so, try `bin/packs add_dependency packs/referencing_package packs/gusto_slack`
                 - If not, what can we change about the design so we do not have to depend on packs/gusto_slack?
               - Does API in packs/gusto_slack/public support this use case?
-                - If not, can we work with [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) to create and use a public API?
+                - If not, can we work with [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) to create and use a public API?
                 - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
 
               </details>
 
-              _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+              _Need help? Join us in #ruby-modularity or see go/packs._
             EXPECTED
 
             expect(actual_markdown.message).to eq expected
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
             expect(actual_markdown.type).to eq :markdown
-          end
-
-          it 'notifies slack' do
-            expect(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!).with(
-              'Packwerk violations',
-              label: 'Packwerk violations',
-              list: [],
-              webhook_link: 'https://hooks.slack.com/services/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'.freeze
-            )
-
-            subject
           end
         end
 
@@ -996,24 +977,24 @@ module DangerPackwerk
               expected = <<~EXPECTED
                 **Packwerk Violation**
                 - Type: Privacy :lock:
-                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
                 - Owning pack: packs/gusto_slack
-                  - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+                  - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
                 <details><summary>Quick suggestions :bulb:</summary>
 
-                Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+                Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
                 - Does the code you are writing live in the right pack?
                   - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
                 - Does PrivateConstant live in the right pack?
                   - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
                 - Does API in packs/gusto_slack/public support this use case?
-                  - If not, can we work with [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) to create and use a public API?
+                  - If not, can we work with [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) to create and use a public API?
                   - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
 
                 </details>
 
-                _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+                _Need help? Join us in #ruby-modularity or see go/packs._
               EXPECTED
 
               expect(actual_markdown.message).to eq expected

@@ -1,7 +1,6 @@
 # typed: strict
 
 require 'danger-packwerk/private/deprecated_references'
-require 'danger-packwerk/private/simple_offenses_formatter'
 require 'constant_resolver'
 
 module DangerPackwerk
