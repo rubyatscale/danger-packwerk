@@ -127,7 +127,7 @@ module DangerPackwerk
                     - packs/some_pack/some_class.rb
                 ==================== DANGER_START
                 Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`, which is also not in `packs/some_pack`'s list of dependencies.
-                We noticed you ran `bin/packwerk update-deprecations`.
+                We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
                 - Could you add some context as a reply here about why we needed to add these violations?
 
@@ -327,7 +327,7 @@ module DangerPackwerk
                   - packs/some_pack/some_class.rb
               ==================== DANGER_START
               Hi again! It looks like `OtherPackClass2` is private API of `packs/some_other_pack`, which is also not in `packs/some_pack`'s list of dependencies.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add these violations?
 
@@ -389,7 +389,7 @@ module DangerPackwerk
                   - packs/some_pack/some_other_class.rb
               ==================== DANGER_START
               Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add this violation?
 
@@ -469,7 +469,7 @@ module DangerPackwerk
                   - packs/some_pack/some_other_class.rb
               ==================== DANGER_START
               Hi again! It looks like `XYZModule` is private API of `packs/some_other_pack`.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add this violation?
 
@@ -549,7 +549,7 @@ module DangerPackwerk
                   - packs/some_pack/some_other_class.rb
               ==================== DANGER_START
               Hi again! It looks like `Helpers` is private API of `packs/some_other_pack`.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add this violation?
 
@@ -629,7 +629,7 @@ module DangerPackwerk
                   - packs/some_pack/some_class.rb
               ==================== DANGER_START
               Hi again! It looks like `OtherPackClass` belongs to `packs/some_other_pack`, which is not in `packs/some_pack`'s list of dependencies.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add this violation?
 
@@ -739,7 +739,7 @@ module DangerPackwerk
                   - packs/some_pack/some_class1.rb
               ==================== DANGER_START
               Hi again! It looks like `OtherPackClass` belongs to `packs/some_other_pack`, which is not in `packs/some_pack`'s list of dependencies.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add these violations?
 
@@ -815,7 +815,7 @@ module DangerPackwerk
                   - packs/some_pack/some_class2.rb
               ==================== DANGER_START
               Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add this violation?
 
@@ -920,7 +920,7 @@ module DangerPackwerk
                   - packs/some_pack/some_entirely_new_class.rb
               ==================== DANGER_START
               Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add this violation?
 
@@ -1033,7 +1033,7 @@ module DangerPackwerk
                   - packs/some_pack/some_file.rb
               ==================== DANGER_START
               Hi again! It looks like `SomeNewClass` is private API of `packs/some_other_pack`.
-              We noticed you ran `bin/packwerk update-deprecations`.
+              We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
 
               - Could you add some context as a reply here about why we needed to add this violation?
 

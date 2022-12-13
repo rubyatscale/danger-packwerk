@@ -9,7 +9,7 @@ RSpec.shared_context 'danger plugin' do
       base: {
         repo: {
           html_url: 'https://github.com/MyOrg/my_repo',
-          owner: { login: 'MyOrg'}
+          owner: { login: 'MyOrg' }
         }
       }
     }

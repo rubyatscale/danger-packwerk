@@ -92,9 +92,7 @@ def write_package_yml(
   metadata: {},
   owner: nil
 )
-  if owner
-    metadata['owner'] = owner
-  end
+  metadata['owner'] = owner if owner
 
   package = ParsePackwerk::Package.new(
     name: pack_name,

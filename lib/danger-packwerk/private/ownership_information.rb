@@ -7,8 +7,6 @@ module DangerPackwerk
     class OwnershipInformation < T::Struct
       extend T::Sig
 
-      DEFAULT_UNKNOWN_OWNERSHIP_MESSAGE = "- This pack is unowned."
-
       const :owning_team, T.nilable(CodeTeams::Team)
       const :github_team, T.nilable(String)
       const :slack_channel, T.nilable(String)
@@ -18,15 +16,15 @@ module DangerPackwerk
       def self.for_package(package, org_name)
         team = CodeOwnership.for_package(package)
 
-        if !team.nil?
+        if team.nil?
+          OwnershipInformation.new
+        else
           OwnershipInformation.new(
             owning_team: team,
             github_team: team.raw_hash.fetch('github', {}).fetch('team', nil),
             slack_channel: team.raw_hash.fetch('slack', {}).fetch('room_for_humans', nil),
             org_name: org_name
           )
-        else
-          OwnershipInformation.new
         end
       end
 
@@ -39,10 +37,9 @@ module DangerPackwerk
           team_slack_link = markdown_link_to_slack_room
           "- Owned by #{markdown_link_to_github_members_no_tag} (Slack: #{team_slack_link})"
         else
-          DEFAULT_UNKNOWN_OWNERSHIP_MESSAGE
+          '- This pack is unowned.'
         end
       end
-
 
       sig { returns(String) }
       def markdown_link_to_slack_room

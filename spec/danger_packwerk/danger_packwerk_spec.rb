@@ -3,7 +3,6 @@ require 'spec_helper'
 module DangerPackwerk
   RSpec.describe DangerPackwerk do
     describe '#check' do
-
       let(:load_paths) do
         {
           'packs/some_pack' => 'Object'
@@ -21,7 +20,7 @@ module DangerPackwerk
         ].each { |path| write_file(path) }
         allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
       end
-      
+
       context 'using inputted formatter' do
         let(:packwerk) { dangerfile.packwerk }
         let(:plugin) { packwerk }
@@ -30,7 +29,7 @@ module DangerPackwerk
             include Check::OffensesFormatter
 
             def format_offenses(offenses, repo_link, org_name)
-              offenses.map(&:message).join("\n\n") 
+              offenses.map(&:message).join("\n\n")
             end
           end
         end
@@ -645,7 +644,7 @@ module DangerPackwerk
             packwerk.check(
               offenses_formatter: formatter.new,
               on_failure: lambda { |offenses|
-                  on_failure_called_message = "`on_failure` called with #{offenses.count} offenses"
+                on_failure_called_message = "`on_failure` called with #{offenses.count} offenses"
               }
             )
             expect(on_failure_called_message).to eq '`on_failure` called with 2 offenses'
@@ -684,11 +683,11 @@ module DangerPackwerk
       end
 
       context 'using default formatter' do
-        subject do        
+        subject do
           danger_packwerk.check(
             grouping_strategy: DangerPackwerk::PerConstantPerPackGrouping,
             offenses_formatter: Check::DefaultFormatter.new(
-              custom_help_message: "Need help? Join us in #ruby-modularity or see go/packs.",
+              custom_help_message: 'Need help? Join us in #ruby-modularity or see go/packs.'
             )
           )
         end
@@ -703,8 +702,6 @@ module DangerPackwerk
               CodeTeams.find('Other Team')
             elsif package.name == 'packs/gusto_slack'
               CodeTeams.find('Product Infrastructure Backend')
-            else
-              nil
             end
           end
 
@@ -720,7 +717,7 @@ module DangerPackwerk
               room_for_robots: '#prod-infra'
               room_for_humans: '#prod-infra'
           YML
-          
+
           write_file('config/teams/other_team.yml', <<~YML)
             name: Other Team
             github:
@@ -961,7 +958,7 @@ module DangerPackwerk
                   violation_type: Packwerk::ViolationType::Privacy,
                   message: 'Vanilla message about privacy violations',
                   location: Packwerk::Node::Location.new(12, 5)
-                ),
+                )
               ]
             end
 

@@ -8,7 +8,7 @@ module DangerPackwerk
 
       sig do
         params(
-          custom_help_message: T.nilable(String),
+          custom_help_message: T.nilable(String)
         ).void
       end
       def initialize(custom_help_message: nil)
@@ -28,18 +28,13 @@ module DangerPackwerk
 
         package_referring_to_constant_owner = Private::OwnershipInformation.for_package(referencing_file_pack, org_name)
 
-        link_to_docs = '[How to Handle Dependency and Privacy Violations (with Flow Chart!)](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)'
-        disclaimer = "We noticed you ran `bin/packwerk update-deprecations`."
+        disclaimer = 'We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.'
         pluralized_violation = offenses.count > 1 ? 'these violations' : 'this violation'
         request_to_add_context = "- Could you add some context as a reply here about why we needed to add #{pluralized_violation}?\n"
 
-        if package_referring_to_constant_owner.owning_team
-          dependency_violation_message = "- cc #{package_referring_to_constant_owner.github_team} (#{package_referring_to_constant_owner.markdown_link_to_slack_room}) for the dependency violation.\n"
-        end
+        dependency_violation_message = "- cc #{package_referring_to_constant_owner.github_team} (#{package_referring_to_constant_owner.markdown_link_to_slack_room}) for the dependency violation.\n" if package_referring_to_constant_owner.owning_team
 
-        if constant_source_package_owner.owning_team
-          privacy_violation_message = "- cc #{constant_source_package_owner.github_team} (#{constant_source_package_owner.markdown_link_to_slack_room}) for the privacy violation.\n"
-        end
+        privacy_violation_message = "- cc #{constant_source_package_owner.github_team} (#{constant_source_package_owner.markdown_link_to_slack_room}) for the privacy violation.\n" if constant_source_package_owner.owning_team
 
         if offenses.any?(&:dependency?) && offenses.any?(&:privacy?)
           <<~MESSAGE.chomp

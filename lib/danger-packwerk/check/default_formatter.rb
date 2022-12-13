@@ -10,7 +10,7 @@ module DangerPackwerk
 
       sig do
         params(
-          custom_help_message: T.nilable(String),
+          custom_help_message: T.nilable(String)
         ).void
       end
       def initialize(custom_help_message: nil)
@@ -21,7 +21,7 @@ module DangerPackwerk
         override.params(
           offenses: T::Array[Packwerk::ReferenceOffense],
           repo_link: String,
-          org_name: String,
+          org_name: String
         ).returns(String)
       end
       def format_offenses(offenses, repo_link, org_name)
@@ -33,12 +33,12 @@ module DangerPackwerk
         constant_name = reference_offense.reference.constant.name.delete_prefix('::')
 
         constant_source_package_name = reference_offense.reference.constant.package.name
-        
+
         constant_location = reference_offense.reference.constant.location
         constant_source_package = T.must(ParsePackwerk.all.find { |p| p.name == constant_source_package_name })
         constant_source_package_ownership_info = Private::OwnershipInformation.for_package(constant_source_package, org_name)
 
-        disclaimer = "Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:"
+        disclaimer = 'Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:'
         referencing_code_in_right_pack = "- Does the code you are writing live in the right pack?\n  - If not, try `bin/packs move packs/destination_pack #{referencing_file}`"
         referenced_code_in_right_pack = "- Does #{constant_name} live in the right pack?\n  - If not, try `bin/packs move packs/destination_pack #{constant_location}`"
         dependency_violation_message = "- Do we actually want to depend on #{constant_source_package_name}?\n  - If so, try `bin/packs add_dependency #{referencing_file_pack} #{constant_source_package_name}`\n  - If not, what can we change about the design so we do not have to depend on #{constant_source_package_name}?"

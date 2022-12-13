@@ -29,10 +29,10 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
   spec.required_ruby_version = '>= 2.6'
 
+  spec.add_dependency 'code_ownership'
   spec.add_dependency 'danger-plugin-api', '~> 1.0'
   spec.add_dependency 'packwerk', '>= 2.2.1'
   spec.add_dependency 'parse_packwerk'
-  spec.add_dependency 'code_ownership'
   spec.add_dependency 'sorbet-runtime'
 
   spec.add_development_dependency 'bundler', '~> 2.0'
