@@ -2,7 +2,7 @@
 
 module DangerPackwerk
   module Private
-    class DefaultAddedOffensesFormatter
+    class SimpleAddedOffensesFormatter
       extend T::Sig
 
       sig { params(violations: T::Array[BasicReferenceOffense]).returns(String) }
