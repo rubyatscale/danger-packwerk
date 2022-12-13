@@ -18,14 +18,14 @@ module DangerPackwerk
         constant_source_package = T.must(ParsePackwerk.all.find { |p| p.name == constant_source_package_name })
         constant_source_package_owner = CodeOwnership.for_package(constant_source_package)
 
-        ruby_modularity_slack_channel = DangerPlugins.markdown_link_to_slack_room('#ruby-modularity')
+        ruby_modularity_slack_channel = markdown_link_to_slack_room('#ruby-modularity')
 
         if constant_source_package_owner
           github_team = GustoTeams::Plugins::Github.for(constant_source_package_owner).github.team
           slack_channel = GustoTeams::Plugins::Slack.for(constant_source_package_owner).slack.room_for_humans
 
           team_to_work_with = DangerPlugins.markdown_link_to_github_members_no_tag(github_team)
-          team_to_work_with_slack_channel = DangerPlugins.markdown_link_to_slack_room(slack_channel)
+          team_to_work_with_slack_channel = markdown_link_to_slack_room(slack_channel)
         else
           team_to_work_with = ruby_modularity_slack_channel
           team_to_work_with_slack_channel = ruby_modularity_slack_channel
@@ -99,7 +99,13 @@ module DangerPackwerk
             _#{get_help}_
           MESSAGE
         end
+        end
+
+      sig { params(room: String).returns(String) }
+      def self.markdown_link_to_slack_room(room)
+        "[<ins>#{room}</ins>](https://slack.com/app_redirect?channel=#{room.delete('#')})"
       end
+
     end
   end
 end

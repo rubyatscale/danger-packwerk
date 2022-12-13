@@ -679,6 +679,384 @@ module DangerPackwerk
           end
         end
       end
+
+      context 'using default formatter' do
+        subject do
+          danger_packwerk.check(
+            offenses_formatter: -> (offenses) do
+              GustoPackwerk::DangerPlugins.format_packwerk_check_danger_message(offenses, 'https://github.com/Gusto/zenpayroll')
+            end,
+            on_failure: -> (_offenses) do
+              prod_infra_helper.notify_slack_once_about_file_modifications!('Packwerk violations', label: 'Packwerk violations', list: [], webhook_link: GustoPackwerk::DangerPlugins::SLACK_WEBHOOK_URL_PACKWERK_FILE_CHANGES)
+            end,
+            grouping_strategy: DangerPackwerk::DangerPackwerk::PerConstantPerPackGrouping
+          )
+        end
+
+        before do
+          ParsePackwerk.bust_cache!
+          write_package_yml('packs/referencing_package')
+          write_package_yml('packs/gusto_slack')
+
+          allow(CodeOwnership).to receive(:for_package) do |package|
+            if package.name == 'packs/referencing_package' # rubocop:disable Style/CaseLikeIf:
+              CodeTeams.find('Other Team')
+            elsif package.name == 'packs/gusto_slack'
+              CodeTeams.find('Product Infrastructure Backend')
+            else
+              nil
+            end
+          end
+
+          allow_any_instance_of(Packwerk::Cli).to receive(:execute_command)
+          allow(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!)
+          allow_any_instance_of(DangerPackwerk::PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
+
+          create_product_infra_team
+          create_other_team
+        end
+
+        include_context 'danger plugin'
+        let(:danger_packwerk) { dangerfile.packwerk }
+        let(:generic_privacy_violation) do
+          sorbet_double(
+            Packwerk::ReferenceOffense,
+            violation_type: Packwerk::ViolationType::Privacy,
+            reference: reference,
+            location: Packwerk::Node::Location.new(12, 5)
+          )
+        end
+        let(:generic_dependency_violation) do
+          sorbet_double(
+            Packwerk::ReferenceOffense,
+            violation_type: Packwerk::ViolationType::Dependency,
+            reference: reference,
+            location: Packwerk::Node::Location.new(12, 5)
+          )
+        end
+        let(:constant) do
+          sorbet_double(Packwerk::ConstantDiscovery::ConstantContext, package: slack_package, name: '::PrivateConstant', location: 'packs/gusto_slack/app/services/private_constant.rb')
+        end
+        let(:reference) do
+          sorbet_double(
+            Packwerk::Reference,
+            source_package: referencing_package,
+            relative_path: 'packs/referencing_package/some_file.rb',
+            constant: constant
+          )
+        end
+        let(:referencing_package) { ParsePackwerk.find('packs/referencing_package') }
+        let(:offenses) { [] }
+        let(:plugin) { danger_packwerk }
+        let(:prod_infra_helper) { sorbet_double(DangerGustoUtilities::ProdInfraHelper, :notify_slack_once_about_file_modifications!) }
+        let(:slack_package) { ParsePackwerk.find('packs/gusto_slack') }
+
+        context 'when there is a new privacy violation when running packwerk check' do
+          let(:offenses) { [generic_privacy_violation] }
+          let(:modified_files) { [write_file('packs/referencing_package/some_file.rb').to_s] }
+
+          it 'leaves an inline comment helping the user figure out what to do next' do
+            subject
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 1
+            actual_markdown = actual_markdowns.first
+            expected = <<~EXPECTED
+              **Packwerk Violation**
+              - Type: Privacy :lock:
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Owning pack: packs/gusto_slack
+                - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+
+              <details><summary>Quick suggestions :bulb:</summary>
+
+              Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+              - Does the code you are writing live in the right pack?
+                - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
+              - Does PrivateConstant live in the right pack?
+                - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
+              - Does API in packs/gusto_slack/public support this use case?
+                - If not, can we work with [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) to create and use a public API?
+                - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
+
+              </details>
+
+              _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+            EXPECTED
+
+            expect(actual_markdown.message).to eq expected
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
+            expect(actual_markdown.type).to eq :markdown
+          end
+
+          it 'notifies slack' do
+            expect(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!).with(
+              'Packwerk violations',
+              label: 'Packwerk violations',
+              list: [],
+              webhook_link: 'https://hooks.slack.com/services/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'.freeze
+            )
+
+            subject
+          end
+
+          context 'there is no owning team' do
+            before do
+              allow(CodeOwnership).to receive(:for_package).and_return(nil)
+            end
+
+            it 'leaves an inline comment helping the user figure out what to do next' do
+              subject
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expected = <<~EXPECTED
+                **Packwerk Violation**
+                - Type: Privacy :lock:
+                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+                - Owning pack: packs/gusto_slack
+                  - Owned by [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) (Slack: [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity))
+
+                <details><summary>Quick suggestions :bulb:</summary>
+
+                Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+                - Does the code you are writing live in the right pack?
+                  - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
+                - Does PrivateConstant live in the right pack?
+                  - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
+                - Does API in packs/gusto_slack/public support this use case?
+                  - If not, can we work with [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) to create and use a public API?
+                  - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
+
+                </details>
+
+                _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+              EXPECTED
+
+              expect(actual_markdown.message).to eq expected
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
+          end
+        end
+
+        context 'when there is a new dependency violation when running packwerk check' do
+          let(:offenses) { [generic_dependency_violation] }
+          let(:modified_files) { [write_file('packs/referencing_package/some_file.rb').to_s] }
+
+          it 'leaves an inline comment helping the user figure out what to do next' do
+            subject
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 1
+            actual_markdown = actual_markdowns.first
+
+            expected = <<~EXPECTED
+              **Packwerk Violation**
+              - Type: Dependency :knot:
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Owning pack: packs/gusto_slack
+                - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+
+              <details><summary>Quick suggestions :bulb:</summary>
+
+              Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+              - Does the code you are writing live in the right pack?
+                - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
+              - Does PrivateConstant live in the right pack?
+                - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
+              - Do we actually want to depend on packs/gusto_slack?
+                - If so, try `bin/packs add_dependency packs/referencing_package packs/gusto_slack`
+                - If not, what can we change about the design so we do not have to depend on packs/gusto_slack?
+
+              </details>
+
+              _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+            EXPECTED
+
+            expect(actual_markdown.message).to eq expected
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
+            expect(actual_markdown.type).to eq :markdown
+          end
+
+          it 'notifies slack' do
+            expect(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!).with(
+              'Packwerk violations',
+              label: 'Packwerk violations',
+              list: [],
+              webhook_link: 'https://hooks.slack.com/services/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'.freeze
+            )
+
+            subject
+          end
+        end
+
+        context 'when there is a new dependency and privacy violation when running packwerk check' do
+          let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
+          let(:modified_files) { [write_file('packs/referencing_package/some_file.rb').to_s] }
+
+          it 'leaves an inline comment helping the user figure out what to do next' do
+            subject
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 1
+            actual_markdown = actual_markdowns.first
+            expected = <<~EXPECTED
+              **Packwerk Violation**
+              - Type: Privacy :lock: + Dependency :knot:
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Owning pack: packs/gusto_slack
+                - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+
+              <details><summary>Quick suggestions :bulb:</summary>
+
+              Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+              - Does the code you are writing live in the right pack?
+                - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
+              - Does PrivateConstant live in the right pack?
+                - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
+              - Do we actually want to depend on packs/gusto_slack?
+                - If so, try `bin/packs add_dependency packs/referencing_package packs/gusto_slack`
+                - If not, what can we change about the design so we do not have to depend on packs/gusto_slack?
+              - Does API in packs/gusto_slack/public support this use case?
+                - If not, can we work with [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) to create and use a public API?
+                - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
+
+              </details>
+
+              _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+            EXPECTED
+
+            expect(actual_markdown.message).to eq expected
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
+            expect(actual_markdown.type).to eq :markdown
+          end
+
+          it 'notifies slack' do
+            expect(prod_infra_helper).to receive(:notify_slack_once_about_file_modifications!).with(
+              'Packwerk violations',
+              label: 'Packwerk violations',
+              list: [],
+              webhook_link: 'https://hooks.slack.com/services/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'.freeze
+            )
+
+            subject
+          end
+        end
+
+        context 'when there are violations on the same constant' do
+          context 'within the same pack' do
+            let(:offenses) do
+              [
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    source_package: referencing_package,
+                    relative_path: 'packs/referencing_package/some_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                ),
+                sorbet_double(
+                  Packwerk::ReferenceOffense,
+                  reference: sorbet_double(
+                    Packwerk::Reference,
+                    source_package: referencing_package,
+                    relative_path: 'packs/referencing_package/some_other_file.rb',
+                    constant: constant
+                  ),
+                  violation_type: Packwerk::ViolationType::Privacy,
+                  message: 'Vanilla message about privacy violations',
+                  location: Packwerk::Node::Location.new(12, 5)
+                ),
+              ]
+            end
+
+            let(:modified_files) { [write_file('packs/referencing_package/some_file.rb').to_s] }
+
+            it 'leaves one comment' do
+              subject
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expected = <<~EXPECTED
+                **Packwerk Violation**
+                - Type: Privacy :lock:
+                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/Gusto/zenpayroll/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+                - Owning pack: packs/gusto_slack
+                  - Owned by [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+
+                <details><summary>Quick suggestions :bulb:</summary>
+
+                Before you run `bin/packwerk update-deprecations`, take a look at [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms) and check out these quick suggestions:
+                - Does the code you are writing live in the right pack?
+                  - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
+                - Does PrivateConstant live in the right pack?
+                  - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
+                - Does API in packs/gusto_slack/public support this use case?
+                  - If not, can we work with [<ins>@Gusto/product-infrastructure</ins>](https://github.com/orgs/Gusto/teams/product-infrastructure/members) to create and use a public API?
+                  - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
+
+                </details>
+
+                _Need help? Join us in [<ins>#ruby-modularity</ins>](https://slack.com/app_redirect?channel=ruby-modularity) or see [<ins>the Packwerk Cheatsheet</ins>](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)._
+              EXPECTED
+
+              expect(actual_markdown.message).to eq expected
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
+          end
+        end
+
+        context 'when there are 100 new violations when running packwerk check' do
+          let(:offenses) do
+            100.times.to_a.map do |i|
+              sorbet_double(
+                Packwerk::ReferenceOffense,
+                violation_type: Packwerk::ViolationType::Dependency,
+                reference: sorbet_double(
+                  Packwerk::Reference,
+                  source_package: referencing_package,
+                  relative_path: 'packs/referencing_package/some_file.rb',
+                  constant: sorbet_double(
+                    Packwerk::ConstantDiscovery::ConstantContext,
+                    package: slack_package,
+                    name: "::PrivateConstant#{i}",
+                    location: 'packs/gusto_slack/app/services/private_constant.rb'
+                  )
+                ),
+                location: Packwerk::Node::Location.new(i, 5)
+              )
+            end
+          end
+
+          let(:modified_files) { [write_file('packs/referencing_package/some_file.rb').to_s] }
+
+          it 'stops commenting after 15 comments' do
+            subject
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 15
+          end
+        end
+      end
     end
   end
 end
