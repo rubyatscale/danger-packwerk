@@ -6,30 +6,64 @@ module DangerPackwerk
       extend T::Sig
       include OffensesFormatter
 
+      sig do
+        params(
+          custom_help_message: T.nilable(String),
+        ).void
+      end
+      def initialize(custom_help_message: nil)
+        @custom_help_message = custom_help_message
+      end
+
       sig { override.params(offenses: T::Array[BasicReferenceOffense], repo_link: String, org_name: String).returns(String) }
       def format_offenses(offenses, repo_link, org_name)
-        offense = T.must(offenses.first)
-        constant_name = offense.class_name.delete_prefix('::')
-        link_to_docs = '[the docs](https://github.com/Shopify/packwerk/blob/b647594f93c8922c038255a7aaca125d391a1fbf/docs/new_violation_flow_chart.pdf)'
-        disclaimer = "We noticed you ran `bin/packwerk update-deprecations`. Make sure to read through #{link_to_docs} for other ways to resolve. "
-        pluralized_violation = offenses.count > 1 ? 'these violations' : 'this violation'
-        request_to_add_context = "Could you add some context as a reply here about why we needed to add #{pluralized_violation}?"
-        violation_types = offenses.map(&:type)
+        violation = T.must(offenses.first)
+        referencing_file_pack = ParsePackwerk.package_from_path(violation.file)
+        # We remove leading double colons as they feel like an implementation detail of packwerk.
+        constant_name = violation.class_name.delete_prefix('::')
+        constant_source_package_name = violation.to_package_name
 
-        if violation_types.include?('dependency') && violation_types.include?('privacy')
-          <<~MESSAGE
-            Hi! It looks like the pack defining `#{constant_name}` considers this private API, and it's also not in the referencing pack's list of dependencies.
-            #{disclaimer}#{request_to_add_context}
+        constant_source_package = T.must(ParsePackwerk.find(constant_source_package_name))
+        constant_source_package_owner = Private::OwnershipInformation.for_package(constant_source_package, org_name)
+
+        package_referring_to_constant_owner = Private::OwnershipInformation.for_package(referencing_file_pack, org_name)
+
+        link_to_docs = '[How to Handle Dependency and Privacy Violations (with Flow Chart!)](https://docs.google.com/document/d/1OGYqV1pt1r6g6LimCDs8RSIR7hBZ7BVO1yohk2Jnu0M/edit#heading=h.k5t08o3oedms)'
+        disclaimer = "We noticed you ran `bin/packwerk update-deprecations`."
+        pluralized_violation = offenses.count > 1 ? 'these violations' : 'this violation'
+        request_to_add_context = "- Could you add some context as a reply here about why we needed to add #{pluralized_violation}?\n"
+
+        if package_referring_to_constant_owner.owning_team
+          dependency_violation_message = "- cc #{package_referring_to_constant_owner.github_team} (#{package_referring_to_constant_owner.markdown_link_to_slack_room}) for the dependency violation.\n"
+        end
+
+        if constant_source_package_owner.owning_team
+          privacy_violation_message = "- cc #{constant_source_package_owner.github_team} (#{constant_source_package_owner.markdown_link_to_slack_room}) for the privacy violation.\n"
+        end
+
+        if offenses.any?(&:dependency?) && offenses.any?(&:privacy?)
+          <<~MESSAGE.chomp
+            Hi again! It looks like `#{constant_name}` is private API of `#{constant_source_package_name}`, which is also not in `#{referencing_file_pack.name}`'s list of dependencies.
+            #{disclaimer}
+
+            #{request_to_add_context}#{dependency_violation_message}#{privacy_violation_message}
+            #{@custom_help_message}
           MESSAGE
-        elsif violation_types.include?('dependency')
-          <<~MESSAGE
-            Hi! It looks like the pack defining `#{constant_name}` is not in the referencing pack's list of dependencies.
-            #{disclaimer}#{request_to_add_context}
+        elsif offenses.any?(&:dependency?)
+          <<~MESSAGE.chomp
+            Hi again! It looks like `#{constant_name}` belongs to `#{constant_source_package_name}`, which is not in `#{referencing_file_pack.name}`'s list of dependencies.
+            #{disclaimer}
+
+            #{request_to_add_context}#{dependency_violation_message}
+            #{@custom_help_message}
           MESSAGE
-        else # violation_types.include?('privacy')
-          <<~MESSAGE
-            Hi! It looks like the pack defining `#{constant_name}` considers this private API.
-            #{disclaimer}#{request_to_add_context}
+        else # violations.any?(&:privacy?)
+          <<~MESSAGE.chomp
+            Hi again! It looks like `#{constant_name}` is private API of `#{constant_source_package_name}`.
+            #{disclaimer}
+
+            #{request_to_add_context}#{privacy_violation_message}
+            #{@custom_help_message}
           MESSAGE
         end
       end
