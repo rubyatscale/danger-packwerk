@@ -47,7 +47,7 @@ module DangerPackwerk
 
       from_package = ParsePackwerk.package_from_path(package_todo_yml_pathname)
       from_package_name = from_package.name
-      violations = Private::PackageTodo.from(package_todo_yml_pathname).violations
+      violations = ParsePackwerk::PackageTodo.from(package_todo_yml_pathname).violations
 
       # See the larger comment below for more information on why we need this information.
       # This is a small optimization that lets us find the location of referenced files within
