@@ -21,6 +21,10 @@ module DangerPackwerk
     DEFAULT_ON_FAILURE = T.let(->(offenses) {}, OnFailure)
     DEFAULT_FAIL = false
     DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
+    DEFAULT_VIOLATION_TYPES = T.let([
+                                      DEPENDENCY_VIOLATION_TYPE,
+                                      PRIVACY_VIOLATION_TYPE
+                                    ], T::Array[String])
 
     class CommentGroupingStrategy < ::T::Enum
       enums do
@@ -38,6 +42,7 @@ module DangerPackwerk
         fail_build: T::Boolean,
         failure_message: String,
         on_failure: OnFailure,
+        violation_types: T::Array[String],
         grouping_strategy: CommentGroupingStrategy
       ).void
     end
@@ -47,6 +52,7 @@ module DangerPackwerk
       fail_build: DEFAULT_FAIL,
       failure_message: DEFAULT_FAILURE_MESSAGE,
       on_failure: DEFAULT_ON_FAILURE,
+      violation_types: DEFAULT_VIOLATION_TYPES,
       grouping_strategy: CommentGroupingStrategy::PerConstantPerLocation
     )
       offenses_formatter ||= Check::DefaultFormatter.new
@@ -88,11 +94,13 @@ module DangerPackwerk
 
       renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
 
-      # Ignore references that have been renamed
       packwerk_reference_offenses_to_care_about = packwerk_reference_offenses.reject do |packwerk_reference_offense|
         constant_name = packwerk_reference_offense.reference.constant.name
         filepath_that_defines_this_constant = Private.constant_resolver.resolve(constant_name)&.location
-        renamed_files.include?(filepath_that_defines_this_constant)
+        # Ignore references that have been renamed
+        renamed_files.include?(filepath_that_defines_this_constant) ||
+          # Ignore violations that are not in the allow-list of violation types to leave comments for
+          !violation_types.include?(packwerk_reference_offense.violation_type)
       end
 
       # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation

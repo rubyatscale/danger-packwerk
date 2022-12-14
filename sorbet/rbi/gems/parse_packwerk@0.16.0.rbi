@@ -65,17 +65,20 @@ class ParsePackwerk::Configuration < ::T::Struct
   end
 end
 
-# source://parse_packwerk//lib/parse_packwerk/constants.rb#20
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#22
 ParsePackwerk::DEFAULT_EXCLUDE_GLOBS = T.let(T.unsafe(nil), Array)
 
-# source://parse_packwerk//lib/parse_packwerk/constants.rb#21
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#23
 ParsePackwerk::DEFAULT_PACKAGE_PATHS = T.let(T.unsafe(nil), Array)
 
-# source://parse_packwerk//lib/parse_packwerk/constants.rb#22
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#24
 ParsePackwerk::DEFAULT_PUBLIC_PATH = T.let(T.unsafe(nil), String)
 
-# source://parse_packwerk//lib/parse_packwerk/constants.rb#12
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#14
 ParsePackwerk::DEPENDENCIES = T.let(T.unsafe(nil), String)
+
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#10
+ParsePackwerk::DEPENDENCY_VIOLATION_TYPE = T.let(T.unsafe(nil), String)
 
 # source://parse_packwerk//lib/parse_packwerk/constants.rb#8
 ParsePackwerk::ENFORCE_DEPENDENCIES = T.let(T.unsafe(nil), String)
@@ -83,13 +86,13 @@ ParsePackwerk::ENFORCE_DEPENDENCIES = T.let(T.unsafe(nil), String)
 # source://parse_packwerk//lib/parse_packwerk/constants.rb#9
 ParsePackwerk::ENFORCE_PRIVACY = T.let(T.unsafe(nil), String)
 
-# source://parse_packwerk//lib/parse_packwerk/constants.rb#11
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#13
 ParsePackwerk::METADATA = T.let(T.unsafe(nil), String)
 
 # Since this metadata is unstructured YAML, it could be any type. We leave it to clients of `ParsePackwerk::Package`
 # to add types based on their known usage of metadata.
 #
-# source://parse_packwerk//lib/parse_packwerk/constants.rb#16
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#18
 ParsePackwerk::MetadataYmlType = T.type_alias { T::Hash[T.untyped, T.untyped] }
 
 # source://parse_packwerk//lib/parse_packwerk.rb#14
@@ -108,7 +111,10 @@ ParsePackwerk::PACKAGE_YML_NAME = T.let(T.unsafe(nil), String)
 # source://parse_packwerk//lib/parse_packwerk/constants.rb#6
 ParsePackwerk::PACKWERK_YML_NAME = T.let(T.unsafe(nil), String)
 
-# source://parse_packwerk//lib/parse_packwerk/constants.rb#10
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#11
+ParsePackwerk::PRIVACY_VIOLATION_TYPE = T.let(T.unsafe(nil), String)
+
+# source://parse_packwerk//lib/parse_packwerk/constants.rb#12
 ParsePackwerk::PUBLIC_PATH = T.let(T.unsafe(nil), String)
 
 # source://parse_packwerk//lib/parse_packwerk/package.rb#4
