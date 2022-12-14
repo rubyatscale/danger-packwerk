@@ -3,7 +3,7 @@
 module DangerPackwerk
   module Private
     #
-    # The `Violation` and `DeprecatedReferences` classes come from Gusto's private `ParsePackwerk` gem.
+    # The `Violation` and `PackageTodo` classes come from Gusto's private `ParsePackwerk` gem.
     # Until we decide to open source that gem, we inline these as a private implementation detail of `DangerPackwerk` for now.
     #
     class Violation < T::Struct
@@ -25,22 +25,22 @@ module DangerPackwerk
       end
     end
 
-    class DeprecatedReferences < T::Struct
+    class PackageTodo < T::Struct
       extend T::Sig
 
       const :pathname, Pathname
       const :violations, T::Array[Violation]
 
-      sig { params(pathname: Pathname).returns(DeprecatedReferences) }
+      sig { params(pathname: Pathname).returns(PackageTodo) }
       def self.from(pathname)
         if pathname.exist?
-          deprecated_references_loaded_yml = YAML.load_file(pathname)
+          package_todo_loaded_yml = YAML.load_file(pathname)
 
           all_violations = []
-          deprecated_references_loaded_yml&.each_key do |to_package_name|
-            deprecated_references_per_package = deprecated_references_loaded_yml[to_package_name]
-            deprecated_references_per_package.each_key do |class_name|
-              symbol_usage = deprecated_references_per_package[class_name]
+          package_todo_loaded_yml&.each_key do |to_package_name|
+            package_todo_per_package = package_todo_loaded_yml[to_package_name]
+            package_todo_per_package.each_key do |class_name|
+              symbol_usage = package_todo_per_package[class_name]
               files = symbol_usage['files']
               violations = symbol_usage['violations']
               all_violations << Violation.new(type: 'dependency', to_package_name: to_package_name, class_name: class_name, files: files) if violations.include? 'dependency'
