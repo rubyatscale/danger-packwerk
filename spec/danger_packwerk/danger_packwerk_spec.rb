@@ -752,7 +752,7 @@ module DangerPackwerk
         let(:reference) do
           sorbet_double(
             Packwerk::Reference,
-            source_package: referencing_package,
+            package: referencing_package,
             relative_path: 'packs/referencing_package/some_file.rb',
             constant: constant
           )
@@ -939,7 +939,7 @@ module DangerPackwerk
                   Packwerk::ReferenceOffense,
                   reference: sorbet_double(
                     Packwerk::Reference,
-                    source_package: referencing_package,
+                    package: referencing_package,
                     relative_path: 'packs/referencing_package/some_file.rb',
                     constant: constant
                   ),
@@ -951,7 +951,7 @@ module DangerPackwerk
                   Packwerk::ReferenceOffense,
                   reference: sorbet_double(
                     Packwerk::Reference,
-                    source_package: referencing_package,
+                    package: referencing_package,
                     relative_path: 'packs/referencing_package/some_other_file.rb',
                     constant: constant
                   ),
@@ -1010,7 +1010,7 @@ module DangerPackwerk
                 violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
                 reference: sorbet_double(
                   Packwerk::Reference,
-                  source_package: referencing_package,
+                  package: referencing_package,
                   relative_path: 'packs/referencing_package/some_file.rb',
                   constant: sorbet_double(
                     Packwerk::ConstantDiscovery::ConstantContext,
