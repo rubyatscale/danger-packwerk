@@ -19,18 +19,24 @@ module DangerPackwerk
     DEFAULT_MAX_COMMENTS = 5
     BeforeComment = T.type_alias { T.proc.params(violation_diff: ViolationDiff, changed_package_todo_ymls: T::Array[String]).void }
     DEFAULT_BEFORE_COMMENT = T.let(->(violation_diff, changed_package_todo_ymls) {}, BeforeComment)
+    DEFAULT_VIOLATION_TYPES = T.let([
+                                      DEPENDENCY_VIOLATION_TYPE,
+                                      PRIVACY_VIOLATION_TYPE
+                                    ], T::Array[String])
 
     sig do
       params(
         offenses_formatter: T.nilable(Update::OffensesFormatter),
         before_comment: BeforeComment,
-        max_comments: Integer
+        max_comments: Integer,
+        violation_types: T::Array[String]
       ).void
     end
     def check(
       offenses_formatter: nil,
       before_comment: DEFAULT_BEFORE_COMMENT,
-      max_comments: DEFAULT_MAX_COMMENTS
+      max_comments: DEFAULT_MAX_COMMENTS,
+      violation_types: DEFAULT_VIOLATION_TYPES
     )
       offenses_formatter ||= Update::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
@@ -38,7 +44,7 @@ module DangerPackwerk
 
       changed_package_todo_ymls = (git.modified_files + git.added_files + git.deleted_files).grep(PACKAGE_TODO_PATTERN)
 
-      violation_diff = get_violation_diff
+      violation_diff = get_violation_diff(violation_types)
 
       before_comment.call(
         violation_diff,
@@ -62,8 +68,8 @@ module DangerPackwerk
       end
     end
 
-    sig { returns(ViolationDiff) }
-    def get_violation_diff # rubocop:disable Naming/AccessorMethodName
+    sig { params(violation_types: T::Array[String]).returns(ViolationDiff) }
+    def get_violation_diff(violation_types)
       added_violations = T.let([], T::Array[BasicReferenceOffense])
       removed_violations = T.let([], T::Array[BasicReferenceOffense])
 
@@ -117,12 +123,18 @@ module DangerPackwerk
       end
 
       relevant_added_violations = added_violations.reject do |violation|
-        renamed_files_after.include?(violation.file) || renamed_constants.include?(violation.class_name)
+        renamed_files_after.include?(violation.file) ||
+          renamed_constants.include?(violation.class_name) ||
+          !violation_types.include?(violation.type)
+      end
+
+      relevant_removed_violations = removed_violations.select do |violation|
+        violation_types.include?(violation.type)
       end
 
       ViolationDiff.new(
         added_violations: relevant_added_violations,
-        removed_violations: removed_violations
+        removed_violations: relevant_removed_violations
       )
     end
 
