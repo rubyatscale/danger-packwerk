@@ -57,7 +57,7 @@ module DangerPackwerk
           sorbet_double(
             Packwerk::ReferenceOffense,
             reference: reference,
-            violation_type: Packwerk::ViolationType::Dependency,
+            violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
             message: 'Vanilla message about dependency violations',
             location: Packwerk::Node::Location.new(12, 5)
           )
@@ -67,7 +67,7 @@ module DangerPackwerk
           sorbet_double(
             Packwerk::ReferenceOffense,
             reference: reference,
-            violation_type: Packwerk::ViolationType::Privacy,
+            violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
             message: 'Vanilla message about privacy violations',
             location: Packwerk::Node::Location.new(12, 5)
           )
@@ -193,14 +193,14 @@ module DangerPackwerk
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 15)
                   ),
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Dependency,
+                    violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
                     message: 'Vanilla message about dependency violations',
                     location: Packwerk::Node::Location.new(12, 15)
                   )
@@ -235,14 +235,14 @@ module DangerPackwerk
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   ),
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(22, 5)
                   )
@@ -281,7 +281,7 @@ module DangerPackwerk
                       relative_path: 'packs/referencing_pack/some_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   ),
@@ -292,7 +292,7 @@ module DangerPackwerk
                       relative_path: 'packs/referencing_pack/some_other_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   )
@@ -331,7 +331,7 @@ module DangerPackwerk
                       relative_path: 'packs/referencing_pack/some_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   ),
@@ -342,7 +342,7 @@ module DangerPackwerk
                       relative_path: 'packs/another_referencing_pack/some_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   )
@@ -394,14 +394,14 @@ module DangerPackwerk
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 15)
                   ),
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Dependency,
+                    violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
                     message: 'Vanilla message about dependency violations',
                     location: Packwerk::Node::Location.new(12, 15)
                   )
@@ -436,14 +436,14 @@ module DangerPackwerk
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   ),
                   sorbet_double(
                     Packwerk::ReferenceOffense,
                     reference: reference,
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(22, 5)
                   )
@@ -474,7 +474,7 @@ module DangerPackwerk
                       relative_path: 'packs/referencing_pack/some_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   ),
@@ -485,7 +485,7 @@ module DangerPackwerk
                       relative_path: 'packs/referencing_pack/some_other_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   )
@@ -527,7 +527,7 @@ module DangerPackwerk
                       relative_path: 'packs/referencing_pack/some_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   ),
@@ -538,7 +538,7 @@ module DangerPackwerk
                       relative_path: 'packs/another_referencing_pack/some_file.rb',
                       constant: constant
                     ),
-                    violation_type: Packwerk::ViolationType::Privacy,
+                    violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                     message: 'Vanilla message about privacy violations',
                     location: Packwerk::Node::Location.new(12, 5)
                   )
@@ -574,7 +574,7 @@ module DangerPackwerk
             100.times.to_a.map do |i|
               sorbet_double(
                 Packwerk::ReferenceOffense,
-                violation_type: Packwerk::ViolationType::Dependency,
+                violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
                 reference: reference,
                 message: 'blah',
                 location: Packwerk::Node::Location.new(i, 5)
@@ -733,7 +733,7 @@ module DangerPackwerk
         let(:generic_privacy_violation) do
           sorbet_double(
             Packwerk::ReferenceOffense,
-            violation_type: Packwerk::ViolationType::Privacy,
+            violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
             reference: reference,
             location: Packwerk::Node::Location.new(12, 5)
           )
@@ -741,7 +741,7 @@ module DangerPackwerk
         let(:generic_dependency_violation) do
           sorbet_double(
             Packwerk::ReferenceOffense,
-            violation_type: Packwerk::ViolationType::Dependency,
+            violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
             reference: reference,
             location: Packwerk::Node::Location.new(12, 5)
           )
@@ -943,7 +943,7 @@ module DangerPackwerk
                     relative_path: 'packs/referencing_package/some_file.rb',
                     constant: constant
                   ),
-                  violation_type: Packwerk::ViolationType::Privacy,
+                  violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                   message: 'Vanilla message about privacy violations',
                   location: Packwerk::Node::Location.new(12, 5)
                 ),
@@ -955,7 +955,7 @@ module DangerPackwerk
                     relative_path: 'packs/referencing_package/some_other_file.rb',
                     constant: constant
                   ),
-                  violation_type: Packwerk::ViolationType::Privacy,
+                  violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
                   message: 'Vanilla message about privacy violations',
                   location: Packwerk::Node::Location.new(12, 5)
                 )
@@ -1007,7 +1007,7 @@ module DangerPackwerk
             100.times.to_a.map do |i|
               sorbet_double(
                 Packwerk::ReferenceOffense,
-                violation_type: Packwerk::ViolationType::Dependency,
+                violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
                 reference: sorbet_double(
                   Packwerk::Reference,
                   source_package: referencing_package,
