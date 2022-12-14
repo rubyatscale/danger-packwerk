@@ -13,7 +13,7 @@ Step 2: Add these to your `Dangerfile`:
 
 ```ruby
 packwerk.check
-deprecated_references_yml_changes.check
+package_todo_yml_changes.check
 ```
 
 That's it for basic usage!
@@ -22,7 +22,7 @@ That's it for basic usage!
 
 There are currently two danger checks that ship with `danger-packwerk`:
 1) One that runs `bin/packwerk check` and leaves inline comments in source code on new violations
-2) One that looks at changes to `deprecated_references.yml` files and leaves inline comments on added violations.
+2) One that looks at changes to `package_todo.yml` files and leaves inline comments on added violations.
 
 In upcoming iterations, we will include other danger checks, including:
 1) A danger check that detects changes to `package.yml` files and posts user-configurable messages on the `package.yml` files that are modified.
@@ -84,15 +84,15 @@ packwerk.check(
 )
 ```
 
-## deprecated_references_yml_changes.check
+## package_todo_yml_changes.check
 ![This is an image displaying an inline comment from the Danger github bot.](docs/update.png)
 
-Without any configuration, `deprecated_references_yml_changes.check` should just work. By default, it will post a maximum of 15 messages in a PR, using default messaging defined within this gem.
+Without any configuration, `package_todo_yml_changes.check` should just work. By default, it will post a maximum of 15 messages in a PR, using default messaging defined within this gem.
 
-`deprecated_references_yml_changes.check` can be configured to in the following ways:
+`package_todo_yml_changes.check` can be configured to in the following ways:
 
 ### Change the message that displays in the markdown
-To customize the message in the GitHub comment, pass in `offenses_formatter` to `deprecated_references_yml_changes.check` in your `Dangerfile`. Here's a simple example:
+To customize the message in the GitHub comment, pass in `offenses_formatter` to `package_todo_yml_changes.check` in your `Dangerfile`. Here's a simple example:
 ```ruby
 class MyFormatter
   extend T::Sig
@@ -104,28 +104,28 @@ class MyFormatter
   end
 end
 
-deprecated_references_yml_changes.check(offenses_formatter: MyFormatter.new)
+package_todo_yml_changes.check(offenses_formatter: MyFormatter.new)
 ```
 
 If you'd like to keep the default messaging but add some context customized to your organization, you can pass that in as follows:
 ```ruby
 custom_help_message = "Need help? Check out our internal docs [here](www.example.com)"
-deprecated_references_yml_changes.check(offenses_formatter: DangerPackwerk::Update::DefaultFormatter.new(custom_help_message: custom_help_message))
+package_todo_yml_changes.check(offenses_formatter: DangerPackwerk::Update::DefaultFormatter.new(custom_help_message: custom_help_message))
 ```
 
 ### Change the max number of comments that will display
 If you do not change this, the default max is 15. More information about why we chose this number in the source code.
 ```ruby
-deprecated_references_yml_changes.check(max_comments: 3)
+package_todo_yml_changes.check(max_comments: 3)
 ```
 
 ### Do something extra before we leave comments
 Maybe you want to notify slack or do something else before we leave comments.
 
 ```ruby
-deprecated_references_yml_changes.check(
-  # violation_diff is a DangerPackwerk::ViolationDiff and changed_deprecated_references_ymls is a T::Array[String]
-  before_comment: -> (violation_diff, changed_deprecated_references_ymls) do
+package_todo_yml_changes.check(
+  # violation_diff is a DangerPackwerk::ViolationDiff and changed_package_todo_ymls is a T::Array[String]
+  before_comment: -> (violation_diff, changed_package_todo_ymls) do
     # Notify slack or otherwise do something extra!
   end
 )

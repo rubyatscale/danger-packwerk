@@ -1,10 +1,10 @@
 require 'spec_helper'
 
 module DangerPackwerk
-  RSpec.describe DangerDeprecatedReferencesYmlChanges do
+  RSpec.describe DangerPackageTodoYmlChanges do
     describe '#check' do
-      let(:danger_deprecated_references_yml_changes) { dangerfile.deprecated_references_yml_changes }
-      let(:plugin) { danger_deprecated_references_yml_changes }
+      let(:danger_package_todo_yml_changes) { dangerfile.package_todo_yml_changes }
+      let(:plugin) { danger_package_todo_yml_changes }
       let(:slack_notifier) do
         double(notify_slack: true)
       end
@@ -16,22 +16,22 @@ module DangerPackwerk
       end
 
       let(:before_comment) do
-        lambda do |violation_diff, changed_deprecated_references_ymls|
+        lambda do |violation_diff, changed_package_todo_ymls|
           diff_json = {
             privacy: { plus: violation_diff.added_violations.count(&:privacy?), minus: violation_diff.removed_violations.count(&:privacy?) },
             dependency: { plus: violation_diff.added_violations.count(&:dependency?), minus: violation_diff.removed_violations.count(&:dependency?) }
           }
-          slack_notifier.notify_slack(diff_json, changed_deprecated_references_ymls)
+          slack_notifier.notify_slack(diff_json, changed_package_todo_ymls)
         end
       end
 
       subject do
-        danger_deprecated_references_yml_changes.check(
+        danger_package_todo_yml_changes.check(
           before_comment: before_comment
         )
       end
 
-      let(:some_pack_deprecated_references_before) { nil }
+      let(:some_pack_package_todo_before) { nil }
 
       before do
         write_file('packs/some_pack/package.yml', <<~YML)
@@ -49,7 +49,7 @@ module DangerPackwerk
           enforce_dependencies: true
         YML
 
-        allow(danger_deprecated_references_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/deprecated_references.yml' => double(patch: 'some_fancy_patch') })
+        allow(danger_package_todo_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/package_todo.yml' => double(patch: 'some_fancy_patch') })
 
         # After we make the system call to apply the inverse of the deletion patch, we should expect the file
         # to be present again, so we write it here as a means of stubbing out that call to `git`.
@@ -57,7 +57,7 @@ module DangerPackwerk
           expect(system_call).to include('git apply --reverse ')
           patch_file = system_call.gsub('git apply --reverse ', '')
           expect(File.read(patch_file)).to eq "some_fancy_patch\n"
-          some_pack_deprecated_references_before
+          some_pack_package_todo_before
         end
 
         # These paths need to exist for ConstantResolver
@@ -71,7 +71,7 @@ module DangerPackwerk
         allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
       end
 
-      context 'when no deprecated_references.yml files have been added or modified' do
+      context 'when no package_todo.yml files have been added or modified' do
         let(:modified_files) { ['app/models/employee.rb'] }
         let(:added_files) { ['spec/models/employee_spec.rb'] }
 
@@ -86,10 +86,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is added (i.e. a pack has its first violation)' do
+      context 'a package_todo.yml file is added (i.e. a pack has its first violation)' do
         let(:added_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -105,7 +105,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 0, plus: 1 }, privacy: { minus: 0, plus: 1 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -115,7 +115,7 @@ module DangerPackwerk
           it 'displays a markdown with a reasonable message' do
             subject
 
-            expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
               <<~EXPECTED
                 ---
                 packs/some_other_pack:
@@ -154,10 +154,10 @@ module DangerPackwerk
           end
 
           subject do
-            danger_deprecated_references_yml_changes.check(
+            danger_package_todo_yml_changes.check(
               offenses_formatter: offenses_formatter.new,
-              before_comment: lambda do |_violation_diff, changed_deprecated_references_ymls|
-                slack_notifier.notify_slack(changed_deprecated_references_ymls)
+              before_comment: lambda do |_violation_diff, changed_package_todo_ymls|
+                slack_notifier.notify_slack(changed_package_todo_ymls)
               end
             )
           end
@@ -165,7 +165,7 @@ module DangerPackwerk
           it 'displays a markdown using the passed in offenses formatter' do
             subject
 
-            expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+            expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
               <<~EXPECTED
                 ---
                 packs/some_other_pack:
@@ -187,10 +187,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is deleted (i.e. a pack has all violations removed)' do
-        let(:deleted_files) { ['packs/some_pack/deprecated_references.yml'] }
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+      context 'a package_todo.yml file is deleted (i.e. a pack has all violations removed)' do
+        let(:deleted_files) { ['packs/some_pack/package_todo.yml'] }
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -205,7 +205,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 1, plus: 0 }, privacy: { minus: 1, plus: 0 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -217,10 +217,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is modified to remove some, but not all, violations' do
+      context 'a package_todo.yml file is modified to remove some, but not all, violations' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -232,8 +232,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -253,7 +253,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 1, plus: 0 }, privacy: { minus: 1, plus: 0 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -265,10 +265,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is modified to add a new violation against a new constant in an existing file' do
+      context 'a package_todo.yml file is modified to add a new violation against a new constant in an existing file' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -286,8 +286,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -301,7 +301,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 0, plus: 1 }, privacy: { minus: 0, plus: 1 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -310,7 +310,7 @@ module DangerPackwerk
         it 'displays a markdown with a reasonable message' do
           subject
 
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -337,10 +337,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is modified to add a new reference against an existing constant in an existing file' do
+      context 'a package_todo.yml file is modified to add a new reference against an existing constant in an existing file' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -353,8 +353,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -368,7 +368,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 1 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -377,7 +377,7 @@ module DangerPackwerk
         it 'displays a markdown with a reasonable message' do
           subject
 
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -399,10 +399,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is modified to add another violation on a file with an existing violation' do
+      context 'a package_todo.yml file is modified to add another violation on a file with an existing violation' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "ABCClass":
@@ -421,8 +421,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "ABCClass":
@@ -442,7 +442,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 1 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -451,7 +451,7 @@ module DangerPackwerk
         it 'displays a markdown with a reasonable message' do
           subject
 
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -479,10 +479,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is modified to add another violation on a file with an existing violation, and the constants have clashing names' do
+      context 'a package_todo.yml file is modified to add another violation on a file with an existing violation, and the constants have clashing names' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "::TopLevelModule::Helpers::MyHelper":
@@ -501,8 +501,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "::TopLevelModule::Helpers::MyHelper":
@@ -522,7 +522,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 1 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -531,7 +531,7 @@ module DangerPackwerk
         it 'displays a markdown with a reasonable message' do
           subject
 
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -559,10 +559,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is modified to change violations in many files' do
+      context 'a package_todo.yml file is modified to change violations in many files' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -575,8 +575,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -608,7 +608,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 6, plus: 1 }, privacy: { minus: 12, plus: 0 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -617,7 +617,7 @@ module DangerPackwerk
         it 'displays a markdown with a reasonable message' do
           subject
 
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -639,10 +639,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file is modified to add 30 and remove 15 violations' do
+      context 'a package_todo.yml file is modified to add 30 and remove 15 violations' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -669,8 +669,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -718,7 +718,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 15, plus: 15 }, privacy: { minus: 15, plus: 0 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -727,7 +727,7 @@ module DangerPackwerk
         it 'displays a markdown with a reasonable message' do
           subject
 
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -763,10 +763,10 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file using single quotes is modified' do
+      context 'a package_todo.yml file using single quotes is modified' do
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 'OtherPackClass':
@@ -779,8 +779,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               'OtherPackClass':
@@ -794,7 +794,7 @@ module DangerPackwerk
         it 'calls the before comment input proc' do
           expect(slack_notifier).to receive(:notify_slack).with(
             { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 1 } },
-            ['packs/some_pack/deprecated_references.yml']
+            ['packs/some_pack/package_todo.yml']
           )
 
           subject
@@ -803,7 +803,7 @@ module DangerPackwerk
         it 'displays a markdown with a reasonable message' do
           subject
 
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -825,7 +825,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file has been modified with files that have been renamed' do
+      context 'a package_todo.yml file has been modified with files that have been renamed' do
         let(:renamed_files) do
           [
             {
@@ -837,7 +837,7 @@ module DangerPackwerk
 
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -849,8 +849,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -867,7 +867,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file has been modified with files that have been renamed AND been added' do
+      context 'a package_todo.yml file has been modified with files that have been renamed AND been added' do
         let(:renamed_files) do
           [
             {
@@ -881,7 +881,7 @@ module DangerPackwerk
 
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "OtherPackClass":
@@ -894,8 +894,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "OtherPackClass":
@@ -908,7 +908,7 @@ module DangerPackwerk
 
         it 'does not display a markdown message' do
           subject
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -930,7 +930,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file has been modified with constants that have been renamed' do
+      context 'a package_todo.yml file has been modified with constants that have been renamed' do
         let(:renamed_files) do
           [
             {
@@ -942,7 +942,7 @@ module DangerPackwerk
 
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "SomeClassWithNewName":
@@ -954,8 +954,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "SomeClassWithOldName":
@@ -972,7 +972,7 @@ module DangerPackwerk
         end
       end
 
-      context 'a deprecated_references.yml file has been modified with constants that have been renamed AND been added' do
+      context 'a package_todo.yml file has been modified with constants that have been renamed AND been added' do
         let(:renamed_files) do
           [
             {
@@ -986,7 +986,7 @@ module DangerPackwerk
 
         let(:modified_files) do
           [
-            write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
               ---
               packs/some_other_pack:
                 "SomeClassWithNewName":
@@ -1003,8 +1003,8 @@ module DangerPackwerk
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "SomeClassWithOldName":
@@ -1017,7 +1017,7 @@ module DangerPackwerk
 
         it 'does display a markdown message' do
           subject
-          expect('packs/some_pack/deprecated_references.yml').to contain_inline_markdown(
+          expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
             <<~EXPECTED
               ---
               packs/some_other_pack:
@@ -1043,9 +1043,9 @@ module DangerPackwerk
         end
       end
 
-      context 'a package has been renamed, causing a deprecated references file to be deleted but registered as a modification' do
+      context 'a package has been renamed, causing a package_todo.yml file to be deleted but registered as a modification' do
         before do
-          write_file('packs/some_pack/deprecated_references.yml', <<~YML.strip)
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
             ---
             packs/some_other_pack:
               "SomeClassWithNewName":
@@ -1059,20 +1059,20 @@ module DangerPackwerk
         let(:renamed_files) do
           [
             {
-              after: 'packs/some_pack/deprecated_references.yml',
-              before: 'packs/old_pack_name/deprecated_references.yml'
+              after: 'packs/some_pack/package_todo.yml',
+              before: 'packs/old_pack_name/package_todo.yml'
             }
           ]
         end
 
         let(:modified_files) do
           [
-            some_pack_deprecated_references_before
+            some_pack_package_todo_before
           ]
         end
 
-        let(:some_pack_deprecated_references_before) do
-          'packs/old_pack_name/deprecated_references.yml'
+        let(:some_pack_package_todo_before) do
+          'packs/old_pack_name/package_todo.yml'
         end
 
         it 'does not display a markdown message' do

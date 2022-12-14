@@ -60,6 +60,16 @@ module DangerPackwerk
       def show_stale_violations(offense_collection, for_files)
         ''
       end
+
+      sig { override.params(strict_mode_violations: T::Array[::Packwerk::ReferenceOffense]).returns(::String) }
+      def show_strict_mode_violations(strict_mode_violations)
+        ''
+      end
+
+      sig { override.returns(::String) }
+      def identifier
+        'offenses_aggregator'
+      end
     end
   end
 end

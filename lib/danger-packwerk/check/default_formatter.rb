@@ -45,7 +45,7 @@ module DangerPackwerk
         team_to_work_with = constant_source_package_ownership_info.owning_team ? constant_source_package_ownership_info.markdown_link_to_github_members_no_tag : 'the pack owner'
         privacy_violation_message = "- Does API in #{constant_source_package.name}/public support this use case?\n  - If not, can we work with #{team_to_work_with} to create and use a public API?\n  - If `#{constant_name}` should already be public, try `bin/packs make_public #{constant_location}`."
 
-        if violation_types.include?(Packwerk::ViolationType::Dependency) && violation_types.include?(Packwerk::ViolationType::Privacy)
+        if violation_types.include?(::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE) && violation_types.include?(::DangerPackwerk::PRIVACY_VIOLATION_TYPE)
           <<~MESSAGE
             **Packwerk Violation**
             - Type: Privacy :lock: + Dependency :knot:
@@ -65,7 +65,7 @@ module DangerPackwerk
 
             _#{@custom_help_message}_
           MESSAGE
-        elsif violation_types.include?(Packwerk::ViolationType::Dependency)
+        elsif violation_types.include?(::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE)
           <<~MESSAGE
             **Packwerk Violation**
             - Type: Dependency :knot:
@@ -84,7 +84,7 @@ module DangerPackwerk
 
             _#{@custom_help_message}_
           MESSAGE
-        else # violation_types.include?(Packwerk::ViolationType::Privacy)
+        else # violation_types.include?(::DangerPackwerk::PRIVACY_VIOLATION_TYPE)
           <<~MESSAGE
             **Packwerk Violation**
             - Type: Privacy :lock:
