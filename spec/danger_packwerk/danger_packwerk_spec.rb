@@ -19,6 +19,7 @@ module DangerPackwerk
           'packs/some_pack/some_class_with_old_name.rb'
         ].each { |path| write_file(path) }
         allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
+        write_package_yml('packs/some_pack')
       end
 
       context 'using inputted formatter' do
@@ -50,7 +51,7 @@ module DangerPackwerk
         end
 
         let(:constant) do
-          sorbet_double(Packwerk::ConstantDiscovery::ConstantContext, name: '::PrivateConstant')
+          sorbet_double(Packwerk::ConstantDiscovery::ConstantContext, location: Packwerk::Node::Location.new(12, 5), package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
         end
 
         let(:generic_dependency_violation) do
@@ -678,6 +679,41 @@ module DangerPackwerk
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             expect(dangerfile.status_report[:markdowns]).to be_empty
+          end
+        end
+
+        context 'when there is a new unknown violation when running packwerk check' do
+          let(:unknown_violation) do
+            sorbet_double(
+              Packwerk::ReferenceOffense,
+              reference: reference,
+              violation_type: 'unknown',
+              message: 'Some unknown message',
+              location: Packwerk::Node::Location.new(12, 5)
+            )
+          end
+          let(:offenses) { [unknown_violation] }
+
+          it 'does not leave an inline comment helping the user figure out what to do next' do
+            packwerk.check(offenses_formatter: formatter.new)
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            expect(dangerfile.status_report[:markdowns]).to be_empty
+          end
+
+          context 'user has specified to receive comments about these unknown violations' do
+            it 'does leave an inline comment helping the user figure out what to do next' do
+              packwerk.check(violation_types: ['unknown'], offenses_formatter: formatter.new)
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expect(actual_markdown.message).to eq 'Some unknown message'
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
           end
         end
       end

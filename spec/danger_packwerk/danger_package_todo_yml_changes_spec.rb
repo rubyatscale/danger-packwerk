@@ -1080,6 +1080,96 @@ module DangerPackwerk
           expect(dangerfile).to produce_no_danger_messages
         end
       end
+
+      context 'an unknown violation type is added to a new package_todo.yml file' do
+        let(:added_files) { ['packs/some_pack/package_todo.yml'] }
+
+        before do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "OtherPackClass":
+                violations:
+                - unknown
+                files:
+                - packs/some_pack/some_class.rb
+          YML
+        end
+
+        it 'calls the before comment input proc' do
+          expect(slack_notifier).to receive(:notify_slack).with(
+            { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 0 } },
+            ['packs/some_pack/package_todo.yml']
+          )
+
+          subject
+        end
+
+        context 'a offenses formatter is passed in' do
+          let(:offenses_formatter) do
+            Class.new do
+              include Update::OffensesFormatter
+
+              def format_offenses(added_violations, repo_link, org_name)
+                <<~MESSAGE
+                  There are #{added_violations.count} new violations,
+                  with class_names #{added_violations.map(&:class_name).uniq.sort},
+                  with to_package_names #{added_violations.map(&:to_package_name).uniq.sort},
+                  with types #{added_violations.map(&:type).sort},
+                MESSAGE
+              end
+            end
+          end
+
+          subject do
+            danger_package_todo_yml_changes.check(
+              offenses_formatter: offenses_formatter.new,
+              before_comment: lambda do |_violation_diff, changed_package_todo_ymls|
+                slack_notifier.notify_slack(changed_package_todo_ymls)
+              end
+            )
+          end
+
+          it 'displays no markdowns' do
+            subject
+            expect(dangerfile.status_report[:markdowns]).to be_empty
+          end
+
+          context 'user has specified to receive comments about these unknown violations' do
+            subject do
+              danger_package_todo_yml_changes.check(
+                violation_types: ['unknown'],
+                offenses_formatter: offenses_formatter.new,
+                before_comment: lambda do |_violation_diff, changed_package_todo_ymls|
+                  slack_notifier.notify_slack(changed_package_todo_ymls)
+                end
+              )
+            end
+
+            it 'displays a markdown using the passed in offenses formatter' do
+              subject
+
+              expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
+                <<~EXPECTED
+                  ---
+                  packs/some_other_pack:
+                    "OtherPackClass":
+                      violations:
+                      - unknown
+                      files:
+                      - packs/some_pack/some_class.rb
+                  ==================== DANGER_START
+                  There are 1 new violations,
+                  with class_names ["OtherPackClass"],
+                  with to_package_names ["packs/some_other_pack"],
+                  with types ["unknown"],
+                  ==================== DANGER_END
+                EXPECTED
+              ).and_nothing_else
+            end
+          end
+        end
+      end
     end
   end
 end
