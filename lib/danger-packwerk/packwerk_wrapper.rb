@@ -68,7 +68,7 @@ module DangerPackwerk
 
       sig { override.returns(::String) }
       def identifier
-        'offenses_aggregator'
+        'danger_packwerk_offenses_aggregator'
       end
     end
   end
