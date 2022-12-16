@@ -818,7 +818,7 @@ module DangerPackwerk
 
               <details><summary>Quick suggestions :bulb:</summary>
 
-              Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
+              Before you run `bin/packwerk update-todo`, check out these quick suggestions:
               - Does the code you are writing live in the right pack?
                 - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
               - Does PrivateConstant live in the right pack?
@@ -859,7 +859,7 @@ module DangerPackwerk
 
                 <details><summary>Quick suggestions :bulb:</summary>
 
-                Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
+                Before you run `bin/packwerk update-todo`, check out these quick suggestions:
                 - Does the code you are writing live in the right pack?
                   - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
                 - Does PrivateConstant live in the right pack?
@@ -902,7 +902,7 @@ module DangerPackwerk
 
               <details><summary>Quick suggestions :bulb:</summary>
 
-              Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
+              Before you run `bin/packwerk update-todo`, check out these quick suggestions:
               - Does the code you are writing live in the right pack?
                 - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
               - Does PrivateConstant live in the right pack?
@@ -943,7 +943,7 @@ module DangerPackwerk
 
               <details><summary>Quick suggestions :bulb:</summary>
 
-              Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
+              Before you run `bin/packwerk update-todo`, check out these quick suggestions:
               - Does the code you are writing live in the right pack?
                 - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
               - Does PrivateConstant live in the right pack?
@@ -1016,7 +1016,7 @@ module DangerPackwerk
 
                 <details><summary>Quick suggestions :bulb:</summary>
 
-                Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:
+                Before you run `bin/packwerk update-todo`, check out these quick suggestions:
                 - Does the code you are writing live in the right pack?
                   - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
                 - Does PrivateConstant live in the right pack?

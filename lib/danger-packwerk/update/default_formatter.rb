@@ -28,7 +28,7 @@ module DangerPackwerk
 
         package_referring_to_constant_owner = Private::OwnershipInformation.for_package(referencing_file_pack, org_name)
 
-        disclaimer = 'We noticed you ran `bin/packwerk update-deprecations`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.'
+        disclaimer = 'We noticed you ran `bin/packwerk update-todo`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.'
         pluralized_violation = offenses.count > 1 ? 'these violations' : 'this violation'
         request_to_add_context = "- Could you add some context as a reply here about why we needed to add #{pluralized_violation}?\n"
 
