@@ -692,7 +692,7 @@ end
 # source://packwerk//lib/packwerk/files_for_processing.rb#8
 Packwerk::FilesForProcessing::RelativeFileSet = T.type_alias { T::Set[::String] }
 
-# source://packwerk//lib/packwerk.rb#51
+# source://packwerk//lib/packwerk.rb#53
 module Packwerk::Formatters
   extend ::ActiveSupport::Autoload
 end
@@ -1288,7 +1288,7 @@ module Packwerk::OutputStyle
   def reset; end
 end
 
-# source://packwerk//lib/packwerk.rb#40
+# source://packwerk//lib/packwerk.rb#42
 module Packwerk::OutputStyles
   extend ::ActiveSupport::Autoload
 end
@@ -2139,11 +2139,11 @@ class Packwerk::Validators::DependencyValidator
   #
   #   ["a -> b -> c -> a", "b -> c -> b"]
   #
-  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#144
+  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#145
   sig { params(cycles: T.untyped).returns(T::Array[::String]) }
   def build_cycle_strings(cycles); end
 
-  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#66
+  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#67
   sig { params(package_set: Packwerk::PackageSet).returns(::Packwerk::Validator::Result) }
   def check_acyclic_graph(package_set); end
 
@@ -2151,11 +2151,11 @@ class Packwerk::Validators::DependencyValidator
   sig { params(configuration: ::Packwerk::Configuration).returns(::Packwerk::Validator::Result) }
   def check_package_manifest_syntax(configuration); end
 
-  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#92
+  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#93
   sig { params(configuration: ::Packwerk::Configuration).returns(::Packwerk::Validator::Result) }
   def check_valid_package_dependencies(configuration); end
 
-  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#128
+  # source://packwerk//lib/packwerk/validators/dependency_validator.rb#129
   sig { params(configuration: ::Packwerk::Configuration, path: T.untyped).returns(T::Boolean) }
   def invalid_package_path?(configuration, path); end
 end
