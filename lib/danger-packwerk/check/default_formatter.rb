@@ -38,7 +38,7 @@ module DangerPackwerk
         constant_source_package = T.must(ParsePackwerk.all.find { |p| p.name == constant_source_package_name })
         constant_source_package_ownership_info = Private::OwnershipInformation.for_package(constant_source_package, org_name)
 
-        disclaimer = 'Before you run `bin/packwerk update-deprecations`, check out these quick suggestions:'
+        disclaimer = 'Before you run `bin/packwerk update-todo`, check out these quick suggestions:'
         referencing_code_in_right_pack = "- Does the code you are writing live in the right pack?\n  - If not, try `bin/packs move packs/destination_pack #{referencing_file}`"
         referenced_code_in_right_pack = "- Does #{constant_name} live in the right pack?\n  - If not, try `bin/packs move packs/destination_pack #{constant_location}`"
         dependency_violation_message = "- Do we actually want to depend on #{constant_source_package_name}?\n  - If so, try `bin/packs add_dependency #{referencing_file_pack} #{constant_source_package_name}`\n  - If not, what can we change about the design so we do not have to depend on #{constant_source_package_name}?"
