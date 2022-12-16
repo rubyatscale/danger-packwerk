@@ -51,7 +51,7 @@ module DangerPackwerk
         end
 
         let(:constant) do
-          sorbet_double(Packwerk::ConstantDiscovery::ConstantContext, location: Packwerk::Node::Location.new(12, 5), package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
+          sorbet_double(Packwerk::ConstantContext, location: Packwerk::Node::Location.new(12, 5), package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
         end
 
         let(:generic_dependency_violation) do
@@ -669,7 +669,7 @@ module DangerPackwerk
           end
 
           let(:constant) do
-            sorbet_double(Packwerk::ConstantDiscovery::ConstantContext, name: 'SomeClassWithNewName')
+            sorbet_double(Packwerk::ConstantContext, name: 'SomeClassWithNewName')
           end
 
           let(:offenses) { [generic_dependency_violation] }
@@ -783,7 +783,7 @@ module DangerPackwerk
           )
         end
         let(:constant) do
-          sorbet_double(Packwerk::ConstantDiscovery::ConstantContext, package: slack_package, name: '::PrivateConstant', location: 'packs/gusto_slack/app/services/private_constant.rb')
+          sorbet_double(Packwerk::ConstantContext, package: slack_package, name: '::PrivateConstant', location: 'packs/gusto_slack/app/services/private_constant.rb')
         end
         let(:reference) do
           sorbet_double(
@@ -1049,7 +1049,7 @@ module DangerPackwerk
                   package: referencing_package,
                   relative_path: 'packs/referencing_package/some_file.rb',
                   constant: sorbet_double(
-                    Packwerk::ConstantDiscovery::ConstantContext,
+                    Packwerk::ConstantContext,
                     package: slack_package,
                     name: "::PrivateConstant#{i}",
                     location: 'packs/gusto_slack/app/services/private_constant.rb'

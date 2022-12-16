@@ -1,6 +1,6 @@
 GIT
-  remote: https://github.com/Shopify/packwerk
-  revision: 7e8e7a50705833b41fe40c201eadb85ff9a1a422
+  remote: https://github.com/Shopify/packwerk.git
+  revision: 8476bb3cd5452765ad452d36aa45ae724f1d44f5
   branch: main
   specs:
     packwerk (2.2.1)
@@ -17,7 +17,7 @@ GIT
 PATH
   remote: .
   specs:
-    danger-packwerk (0.10.0)
+    danger-packwerk (0.11.0)
       code_ownership
       danger-plugin-api (~> 1.0)
       packwerk
@@ -109,7 +109,7 @@ GEM
     faraday-patron (1.0.0)
     faraday-rack (1.0.0)
     faraday-retry (1.0.3)
-    git (1.12.0)
+    git (1.13.0)
       addressable (~> 2.8)
       rchardet (~> 1.8)
     i18n (1.12.0)
@@ -136,7 +136,7 @@ GEM
       sawyer (~> 0.9)
     open4 (1.3.4)
     parallel (1.22.1)
-    parse_packwerk (0.16.0)
+    parse_packwerk (0.17.0)
       sorbet-runtime
     parser (3.1.3.0)
       ast (~> 2.4.1)
