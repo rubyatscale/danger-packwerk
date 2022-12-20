@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/Shopify/packwerk.git
-  revision: 7428f23e243a4a172ddb4e28021a732e2c9abc1a
+  revision: e998ef65194de398f0baaf03a0ba33390b30351e
   branch: main
   specs:
     packwerk (2.2.1)
@@ -17,7 +17,7 @@ GIT
 PATH
   remote: .
   specs:
-    danger-packwerk (0.12.0)
+    danger-packwerk (0.13.0)
       code_ownership
       danger-plugin-api (~> 1.0)
       packwerk
@@ -27,6 +27,13 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    actionpack (7.0.4)
+      actionview (= 7.0.4)
+      activesupport (= 7.0.4)
+      rack (~> 2.0, >= 2.2.0)
+      rack-test (>= 0.6.3)
+      rails-dom-testing (~> 2.0)
+      rails-html-sanitizer (~> 1.0, >= 1.2.0)
     actionview (7.0.4)
       activesupport (= 7.0.4)
       builder (~> 3.1)
@@ -145,11 +152,21 @@ GEM
       method_source (~> 1.0)
     public_suffix (5.0.1)
     racc (1.6.1)
+    rack (2.2.4)
+    rack-test (2.0.2)
+      rack (>= 1.3)
     rails-dom-testing (2.0.3)
       activesupport (>= 4.2.0)
       nokogiri (>= 1.6)
     rails-html-sanitizer (1.4.4)
       loofah (~> 2.19, >= 2.19.1)
+    railties (7.0.4)
+      actionpack (= 7.0.4)
+      activesupport (= 7.0.4)
+      method_source
+      rake (>= 12.2)
+      thor (~> 1.0)
+      zeitwerk (~> 2.5)
     rainbow (3.1.1)
     rake (13.0.6)
     rbi (0.0.16)
@@ -246,6 +263,7 @@ DEPENDENCIES
   danger-packwerk!
   packwerk!
   pry
+  railties
   rake
   rspec (~> 3.0)
   rubocop

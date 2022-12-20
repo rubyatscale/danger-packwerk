@@ -18,7 +18,7 @@ module DangerPackwerk
           'packs/some_pack/some_class_with_new_name.rb',
           'packs/some_pack/some_class_with_old_name.rb'
         ].each { |path| write_file(path) }
-        allow(Packwerk::ApplicationLoadPaths).to receive(:extract_relevant_paths).and_return(load_paths)
+        allow(Packwerk::RailsLoadPaths).to receive(:for).and_return(load_paths)
         write_package_yml('packs/some_pack')
       end
 
