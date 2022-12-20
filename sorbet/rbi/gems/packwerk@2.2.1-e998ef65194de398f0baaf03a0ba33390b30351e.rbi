@@ -9,50 +9,6 @@ module Packwerk
   extend ::ActiveSupport::Autoload
 end
 
-# Extracts the load paths from the analyzed application so that we can map constant names to paths.
-#
-# source://packwerk//lib/packwerk/application_load_paths.rb#8
-module Packwerk::ApplicationLoadPaths
-  class << self
-    # source://packwerk//lib/packwerk/application_load_paths.rb#22
-    sig { returns(T::Hash[::String, ::Module]) }
-    def extract_application_autoload_paths; end
-
-    # source://packwerk//lib/packwerk/application_load_paths.rb#13
-    sig { params(root: ::String, environment: ::String).returns(T::Hash[::String, ::Module]) }
-    def extract_relevant_paths(root, environment); end
-
-    # source://packwerk//lib/packwerk/application_load_paths.rb#32
-    sig do
-      params(
-        all_paths: T::Hash[::String, ::Module],
-        bundle_path: ::Pathname,
-        rails_root: ::Pathname
-      ).returns(T::Hash[::Pathname, ::Module])
-    end
-    def filter_relevant_paths(all_paths, bundle_path: T.unsafe(nil), rails_root: T.unsafe(nil)); end
-
-    # source://packwerk//lib/packwerk/application_load_paths.rb#43
-    sig do
-      params(
-        load_paths: T::Hash[::Pathname, ::Module],
-        rails_root: ::Pathname
-      ).returns(T::Hash[::String, ::Module])
-    end
-    def relative_path_strings(load_paths, rails_root: T.unsafe(nil)); end
-
-    private
-
-    # source://packwerk//lib/packwerk/application_load_paths.rb#63
-    sig { params(paths: T::Hash[T.untyped, ::Module]).void }
-    def assert_load_paths_present(paths); end
-
-    # source://packwerk//lib/packwerk/application_load_paths.rb#50
-    sig { params(root: ::String, environment: ::String).void }
-    def require_application(root, environment); end
-  end
-end
-
 # Checks the structure of the application and its packwerk configuration to make sure we can run a check and deliver
 # correct results.
 #
@@ -1696,6 +1652,50 @@ end
 
 # source://packwerk//lib/packwerk/package_set.rb#8
 Packwerk::PathSpec = T.type_alias { T.any(::String, T::Array[::String]) }
+
+# Extracts the load paths from the analyzed application so that we can map constant names to paths.
+#
+# source://packwerk//lib/packwerk/rails_load_paths.rb#10
+module Packwerk::RailsLoadPaths
+  class << self
+    # source://packwerk//lib/packwerk/rails_load_paths.rb#15
+    sig { params(root: ::String, environment: ::String).returns(T::Hash[::String, ::Module]) }
+    def for(root, environment:); end
+
+    private
+
+    # source://packwerk//lib/packwerk/rails_load_paths.rb#65
+    sig { params(paths: T::Hash[T.untyped, ::Module]).void }
+    def assert_load_paths_present(paths); end
+
+    # source://packwerk//lib/packwerk/rails_load_paths.rb#26
+    sig { returns(T::Hash[::String, ::Module]) }
+    def extract_application_autoload_paths; end
+
+    # source://packwerk//lib/packwerk/rails_load_paths.rb#36
+    sig do
+      params(
+        all_paths: T::Hash[::String, ::Module],
+        bundle_path: ::Pathname,
+        rails_root: ::Pathname
+      ).returns(T::Hash[::Pathname, ::Module])
+    end
+    def filter_relevant_paths(all_paths, bundle_path: T.unsafe(nil), rails_root: T.unsafe(nil)); end
+
+    # source://packwerk//lib/packwerk/rails_load_paths.rb#47
+    sig do
+      params(
+        load_paths: T::Hash[::Pathname, ::Module],
+        rails_root: ::Pathname
+      ).returns(T::Hash[::String, ::Module])
+    end
+    def relative_path_strings(load_paths, rails_root: T.unsafe(nil)); end
+
+    # source://packwerk//lib/packwerk/rails_load_paths.rb#52
+    sig { params(root: ::String, environment: ::String).void }
+    def require_application(root, environment); end
+  end
+end
 
 # A reference from a file in one package to a constant that may be defined in a different package.
 #
