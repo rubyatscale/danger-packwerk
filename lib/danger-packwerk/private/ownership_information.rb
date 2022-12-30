@@ -1,6 +1,7 @@
 # typed: strict
 
 require 'code_ownership'
+require 'packs'
 
 module DangerPackwerk
   module Private
@@ -14,7 +15,8 @@ module DangerPackwerk
 
       sig { params(package: ParsePackwerk::Package, org_name: String).returns(OwnershipInformation) }
       def self.for_package(package, org_name)
-        team = CodeOwnership.for_package(package)
+        pack = Packs.find(package.name)
+        team = pack.nil? ? nil : CodeOwnership.for_package(pack)
 
         if team.nil?
           OwnershipInformation.new

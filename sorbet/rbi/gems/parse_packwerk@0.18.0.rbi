@@ -11,7 +11,7 @@ module ParsePackwerk
     sig { returns(T::Array[::ParsePackwerk::Package]) }
     def all; end
 
-    # source://parse_packwerk//lib/parse_packwerk.rb#112
+    # source://parse_packwerk//lib/parse_packwerk.rb#110
     sig { void }
     def bust_cache!; end
 
@@ -36,7 +36,7 @@ module ParsePackwerk
     # We memoize packages_by_name for fast lookup.
     # Since Graph is an immutable value object, we can create indexes and general caching mechanisms safely.
     #
-    # source://parse_packwerk//lib/parse_packwerk.rb#100
+    # source://parse_packwerk//lib/parse_packwerk.rb#98
     sig { returns(T::Hash[::String, ::ParsePackwerk::Package]) }
     def packages_by_name; end
   end
@@ -120,38 +120,39 @@ ParsePackwerk::PUBLIC_PATH = T.let(T.unsafe(nil), String)
 # source://parse_packwerk//lib/parse_packwerk/package.rb#4
 class ParsePackwerk::Package < ::T::Struct
   const :name, ::String
-  const :enforce_dependencies, T::Boolean
-  const :enforce_privacy, T::Boolean
+  const :enforce_dependencies, T.any(::String, T::Boolean)
+  const :enforce_privacy, T.any(::String, T::Boolean)
   const :public_path, ::String, default: T.unsafe(nil)
   const :metadata, T::Hash[T.untyped, T.untyped]
   const :dependencies, T::Array[::String]
+  const :config, T::Hash[T.untyped, T.untyped]
 
-  # source://parse_packwerk//lib/parse_packwerk/package.rb#35
+  # source://parse_packwerk//lib/parse_packwerk/package.rb#37
   sig { returns(::Pathname) }
   def directory; end
 
-  # source://parse_packwerk//lib/parse_packwerk/package.rb#45
-  sig { returns(T::Boolean) }
+  # source://parse_packwerk//lib/parse_packwerk/package.rb#47
+  sig { returns(T.any(::String, T::Boolean)) }
   def enforces_dependencies?; end
 
-  # source://parse_packwerk//lib/parse_packwerk/package.rb#50
-  sig { returns(T::Boolean) }
+  # source://parse_packwerk//lib/parse_packwerk/package.rb#52
+  sig { returns(T.any(::String, T::Boolean)) }
   def enforces_privacy?; end
 
-  # source://parse_packwerk//lib/parse_packwerk/package.rb#40
+  # source://parse_packwerk//lib/parse_packwerk/package.rb#42
   sig { returns(::Pathname) }
   def public_directory; end
 
-  # source://parse_packwerk//lib/parse_packwerk/package.rb#55
+  # source://parse_packwerk//lib/parse_packwerk/package.rb#57
   sig { returns(T::Array[::ParsePackwerk::Violation]) }
   def violations; end
 
-  # source://parse_packwerk//lib/parse_packwerk/package.rb#30
+  # source://parse_packwerk//lib/parse_packwerk/package.rb#32
   sig { returns(::Pathname) }
   def yml; end
 
   class << self
-    # source://parse_packwerk//lib/parse_packwerk/package.rb#15
+    # source://parse_packwerk//lib/parse_packwerk/package.rb#16
     sig { params(pathname: ::Pathname).returns(::ParsePackwerk::Package) }
     def from(pathname); end
 
