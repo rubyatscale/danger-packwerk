@@ -3,6 +3,8 @@
 require 'bundler/setup'
 require 'cork'
 require 'json'
+require 'packs'
+require 'packs/rspec/support'
 
 module DangerHelpers
   # These functions are a subset of https://github.com/danger/danger/blob/master/spec/spec_helper.rb
@@ -59,23 +61,6 @@ RSpec.configure do |config|
     ParsePackwerk.bust_cache!
     allow(Packwerk::RailsLoadPaths).to receive(:extract_relevant_paths).and_return({})
   end
-
-  config.around do |example|
-    prefix = [File.basename($0), Process.pid].join('-') # rubocop:disable Style/SpecialGlobalVars
-    tmpdir = Dir.mktmpdir(prefix)
-    Dir.chdir(tmpdir) do
-      example.run
-    end
-  ensure
-    FileUtils.rm_rf(tmpdir)
-  end
-end
-
-def write_file(path, content = '')
-  pathname = Pathname.new(path)
-  FileUtils.mkdir_p(pathname.dirname)
-  pathname.write(content)
-  path
 end
 
 def sorbet_double(stubbed_class, attr_map = {})
@@ -85,22 +70,7 @@ def sorbet_double(stubbed_class, attr_map = {})
 end
 
 def write_package_yml(
-  pack_name,
-  dependencies: [],
-  enforce_dependencies: true,
-  enforce_privacy: true,
-  metadata: {},
-  owner: nil
+  pack_name
 )
-  metadata['owner'] = owner if owner
-
-  package = ParsePackwerk::Package.new(
-    name: pack_name,
-    dependencies: dependencies,
-    enforce_dependencies: enforce_dependencies,
-    enforce_privacy: enforce_privacy,
-    metadata: metadata
-  )
-
-  ParsePackwerk.write_package_yml!(package)
+  write_pack(pack_name, { 'enforce_dependencies' => true, 'enforce_privacy' => true })
 end
