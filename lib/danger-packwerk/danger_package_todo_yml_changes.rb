@@ -23,20 +23,23 @@ module DangerPackwerk
                                       DEPENDENCY_VIOLATION_TYPE,
                                       PRIVACY_VIOLATION_TYPE
                                     ], T::Array[String])
+    NOOP_LAMBDA = lambda { |f| f }
 
     sig do
       params(
         offenses_formatter: T.nilable(Update::OffensesFormatter),
         before_comment: BeforeComment,
         max_comments: Integer,
-        violation_types: T::Array[String]
+        violation_types: T::Array[String],
+        filename_transformer: T.proc.params(f: String).returns(String)
       ).void
     end
     def check(
       offenses_formatter: nil,
       before_comment: DEFAULT_BEFORE_COMMENT,
       max_comments: DEFAULT_MAX_COMMENTS,
-      violation_types: DEFAULT_VIOLATION_TYPES
+      violation_types: DEFAULT_VIOLATION_TYPES,
+      filename_transformer: NOOP_LAMBDA
     )
       offenses_formatter ||= Update::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
@@ -44,11 +47,20 @@ module DangerPackwerk
 
       changed_package_todo_ymls = (git.modified_files + git.added_files + git.deleted_files).grep(PACKAGE_TODO_PATTERN)
 
+      transformed_package_todo_ymls = []
+      inverse_file_mapping = {}
+      changed_package_todo_ymls.each do  |f|
+        transformed_filename = filename_transformer.call(f)
+
+        transformed_package_todo_ymls << transformed_filename
+        inverse_file_mapping[transformed_filename] = f
+      end
+
       violation_diff = get_violation_diff(violation_types)
 
       before_comment.call(
         violation_diff,
-        changed_package_todo_ymls.to_a
+        transformed_package_todo_ymls.to_a
       )
 
       current_comment_count = 0
@@ -61,7 +73,7 @@ module DangerPackwerk
         markdown(
           offenses_formatter.format_offenses(violations, repo_link, org_name),
           line: location.line_number,
-          file: location.file
+          file: inverse_file_mapping[location.file]
         )
 
         current_comment_count += 1
