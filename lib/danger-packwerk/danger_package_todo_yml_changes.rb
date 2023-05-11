@@ -23,7 +23,6 @@ module DangerPackwerk
                                       DEPENDENCY_VIOLATION_TYPE,
                                       PRIVACY_VIOLATION_TYPE
                                     ], T::Array[String])
-    NOOP_LAMBDA = lambda { |f| f }
 
     sig do
       params(
@@ -31,7 +30,7 @@ module DangerPackwerk
         before_comment: BeforeComment,
         max_comments: Integer,
         violation_types: T::Array[String],
-        filename_transformer: T.proc.params(f: String).returns(String)
+        base_root_directory: String
       ).void
     end
     def check(
@@ -39,28 +38,21 @@ module DangerPackwerk
       before_comment: DEFAULT_BEFORE_COMMENT,
       max_comments: DEFAULT_MAX_COMMENTS,
       violation_types: DEFAULT_VIOLATION_TYPES,
-      filename_transformer: NOOP_LAMBDA
+      base_root_directory: nil
     )
       offenses_formatter ||= Update::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
       org_name = github.pr_json[:base][:repo][:owner][:login]
 
-      changed_package_todo_ymls = (git.modified_files + git.added_files + git.deleted_files).grep(PACKAGE_TODO_PATTERN)
+      # TODO: write explanation here
+      git_filesystem = Private::GitFilesystem.new(git: git, root: base_root_directory || '')
+      changed_package_todo_ymls = (git_filesystem.modified_files + git_filesystem.added_files + git_filesystem.deleted_files).grep(PACKAGE_TODO_PATTERN)
 
-      transformed_package_todo_ymls = []
-      inverse_file_mapping = {}
-      changed_package_todo_ymls.each do  |f|
-        transformed_filename = filename_transformer.call(f)
-
-        transformed_package_todo_ymls << transformed_filename
-        inverse_file_mapping[transformed_filename] = f
-      end
-
-      violation_diff = get_violation_diff(violation_types)
+      violation_diff = get_violation_diff(violation_types, base_root_directory: base_root_directory)
 
       before_comment.call(
         violation_diff,
-        transformed_package_todo_ymls.to_a
+        changed_package_todo_ymls.to_a
       )
 
       current_comment_count = 0
@@ -73,42 +65,48 @@ module DangerPackwerk
         markdown(
           offenses_formatter.format_offenses(violations, repo_link, org_name),
           line: location.line_number,
-          file: inverse_file_mapping[location.file]
+          file: git_filesystem.convert_to_filesystem(location.file)
         )
 
         current_comment_count += 1
       end
     end
 
-    sig { params(violation_types: T::Array[String]).returns(ViolationDiff) }
-    def get_violation_diff(violation_types)
+    sig do
+      params(
+        violation_types: T::Array[String],
+        base_root_directory: T.nilable(String),
+      ).returns(ViolationDiff)
+    end
+    def get_violation_diff(violation_types, base_root_directory: nil)
       added_violations = T.let([], T::Array[BasicReferenceOffense])
       removed_violations = T.let([], T::Array[BasicReferenceOffense])
 
-      git.added_files.grep(PACKAGE_TODO_PATTERN).each do |added_package_todo_yml_file|
+      git_filesystem = Private::GitFilesystem.new(git: git, root: base_root_directory || '')
+      git_filesystem.added_files.grep(PACKAGE_TODO_PATTERN).each do |added_package_todo_yml_file|
         # Since the file is added, we know on the base commit there are no violations related to this pack,
         # and that all violations from this file are new
         added_violations += BasicReferenceOffense.from(added_package_todo_yml_file)
       end
 
-      git.deleted_files.grep(PACKAGE_TODO_PATTERN).each do |deleted_package_todo_yml_file|
+      git_filesystem.deleted_files.grep(PACKAGE_TODO_PATTERN).each do |deleted_package_todo_yml_file|
         # Since the file is deleted, we know on the HEAD commit there are no violations related to this pack,
         # and that all violations from this file are deleted
-        deleted_violations = get_violations_before_patch_for(deleted_package_todo_yml_file)
+        deleted_violations = get_violations_before_patch_for(git_filesystem, deleted_package_todo_yml_file)
         removed_violations += deleted_violations
       end
 
       # The format for git.renamed_files is a T::Array[{after: "some/path/new", before: "some/path/old"}]
-      renamed_files_before = git.renamed_files.map { |before_after_file| before_after_file[:before] }
-      renamed_files_after = git.renamed_files.map { |before_after_file| before_after_file[:after] }
+      renamed_files_before = git_filesystem.renamed_files.map { |before_after_file| before_after_file[:before] }
+      renamed_files_after = git_filesystem.renamed_files.map { |before_after_file| before_after_file[:after] }
 
-      git.modified_files.grep(PACKAGE_TODO_PATTERN).each do |modified_package_todo_yml_file|
+      git_filesystem.modified_files.grep(PACKAGE_TODO_PATTERN).each do |modified_package_todo_yml_file|
         # We skip over modified files if one of the modified files is a renamed `package_todo.yml` file.
         # This allows us to rename packs while ignoring "new violations" in those renamed packs.
         next if renamed_files_before.include?(modified_package_todo_yml_file)
 
         head_commit_violations = BasicReferenceOffense.from(modified_package_todo_yml_file)
-        base_commit_violations = get_violations_before_patch_for(modified_package_todo_yml_file)
+        base_commit_violations = get_violations_before_patch_for(git_filesystem, modified_package_todo_yml_file)
         added_violations += head_commit_violations - base_commit_violations
         removed_violations += base_commit_violations - head_commit_violations
       end
@@ -152,8 +150,13 @@ module DangerPackwerk
 
     private
 
-    sig { params(package_todo_yml_file: String).returns(T::Array[BasicReferenceOffense]) }
-    def get_violations_before_patch_for(package_todo_yml_file)
+    sig do
+      params(
+        git_filesystem: Private::GitFilesystem,
+        package_todo_yml_file: String
+      ).returns(T::Array[BasicReferenceOffense])
+    end
+    def get_violations_before_patch_for(git_filesystem, package_todo_yml_file)
       # The strategy to get the violations before this PR is to reverse the patch on each `package_todo.yml`.
       # A previous strategy attempted to use `git merge-base --fork-point`, but there are many situations where it returns
       # empty values. That strategy is fickle because it depends on the state of the `reflog` within the CI suite, which appears
@@ -180,7 +183,8 @@ module DangerPackwerk
         # However I'd be interested in why that ever happens, so for now going to proceed as is.
         # (Note that better yet we'd have observability into these so I can just log under those circumstances rather than surfacing an error to the user,
         # but we don't have that quite yet.)
-        patch_for_file = git.diff[package_todo_yml_file].patch
+        package_todo_filesystem_path = git_filesystem.convert_to_filesystem(package_todo_yml_file)
+        patch_for_file = git_filesystem.diff(package_todo_filesystem_path).patch
         # This appears to be a known issue that patches require new lines at the end. It seems like this is an issue with Danger that
         # it gives us a patch without a newline.
         # https://stackoverflow.com/questions/18142870/git-error-fatal-corrupt-patch-at-line-36

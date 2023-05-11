@@ -32,6 +32,7 @@ module DangerPackwerk
       end
 
       let(:some_pack_package_todo_before) { nil }
+      let(:diff_double) { sorbet_double(Git::Diff::DiffFile) }
 
       before do
         write_file('packs/some_pack/package.yml', <<~YML)
@@ -49,7 +50,8 @@ module DangerPackwerk
           enforce_dependencies: true
         YML
 
-        allow(danger_package_todo_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/package_todo.yml' => double(patch: 'some_fancy_patch') })
+        allow(diff_double).to receive(:patch).and_return('some_fancy_patch')
+        allow(danger_package_todo_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/package_todo.yml' => diff_double })
 
         # After we make the system call to apply the inverse of the deletion patch, we should expect the file
         # to be present again, so we write it here as a means of stubbing out that call to `git`.

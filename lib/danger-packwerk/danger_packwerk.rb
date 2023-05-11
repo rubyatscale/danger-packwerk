@@ -6,6 +6,7 @@ require 'packwerk'
 require 'parse_packwerk'
 require 'sorbet-runtime'
 require 'danger-packwerk/packwerk_wrapper'
+require 'danger-packwerk/private/git'
 
 module DangerPackwerk
   # Note that Danger names the plugin (i.e. anything that inherits from `Danger::Plugin`) by taking the name of the class and gsubbing out "Danger"
@@ -25,7 +26,6 @@ module DangerPackwerk
                                       DEPENDENCY_VIOLATION_TYPE,
                                       PRIVACY_VIOLATION_TYPE
                                     ], T::Array[String])
-    NOOP_LAMBDA = lambda { |f| f }
 
     class CommentGroupingStrategy < ::T::Enum
       enums do
@@ -45,7 +45,7 @@ module DangerPackwerk
         on_failure: OnFailure,
         violation_types: T::Array[String],
         grouping_strategy: CommentGroupingStrategy,
-        filename_transformer: T.proc.params(f: String).returns(String)
+        base_root_directory: T.nilable(String)
       ).void
     end
     def check(
@@ -56,7 +56,7 @@ module DangerPackwerk
       on_failure: DEFAULT_ON_FAILURE,
       violation_types: DEFAULT_VIOLATION_TYPES,
       grouping_strategy: CommentGroupingStrategy::PerConstantPerLocation,
-      filename_transformer: NOOP_LAMBDA
+      base_root_directory: nil
     )
       offenses_formatter ||= Check::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
@@ -70,20 +70,13 @@ module DangerPackwerk
       # trigger the warning message, which is good, since we only want to trigger on new code.
       github.dismiss_out_of_range_messages
 
-      transformed_files = []
-      inverse_file_mapping = {}
+      # TODO: write explanation here
+      git_filesystem = Private::GitFilesystem.new(git: git, root: base_root_directory || '')
+
       # https://github.com/danger/danger/blob/eca19719d3e585fe1cc46bc5377f9aa955ebf609/lib/danger/danger_core/plugins/dangerfile_git_plugin.rb#L80
-      renamed_files_after = git.renamed_files.map { |f| f[:after] }
+      renamed_files_after = git_filesystem.renamed_files.map { |f| f[:after] }
 
-      (git.modified_files + git.added_files + renamed_files_after).each do |f|
-        transformed_filename = filename_transformer.call(f)
-        transformed_files << transformed_filename
-        inverse_file_mapping[transformed_filename] = f
-      end
-
-      targeted_files = transformed_files.select do |f|
-        f = filename_transformer.call(f)
-
+      targeted_files = (git_filesystem.modified_files + git_filesystem.added_files + renamed_files_after).select do |f|
         path = Pathname.new(f)
 
         # We probably want to check the `include` key of `packwerk.yml`. By default, this value is "**/*.{rb,rake,erb}",
@@ -106,7 +99,7 @@ module DangerPackwerk
 
       packwerk_reference_offenses = PackwerkWrapper.get_offenses_for_files(targeted_files.to_a).compact
 
-      renamed_files = git.renamed_files.map { |before_after_file| before_after_file[:after] }
+      renamed_files = git_filesystem.renamed_files.map { |before_after_file| before_after_file[:after] }
 
       packwerk_reference_offenses_to_care_about = packwerk_reference_offenses.reject do |packwerk_reference_offense|
         constant_name = packwerk_reference_offense.reference.constant.name
@@ -146,7 +139,8 @@ module DangerPackwerk
 
         message = offenses_formatter.format_offenses(unique_packwerk_reference_offenses, repo_link, org_name)
 
-        markdown(message, file: inverse_file_mapping[referencing_file], line: line_number)
+        # TODO: comment about inverting git
+        markdown(message, file: git_filesystem.convert_to_filesystem(referencing_file), line: line_number)
       end
 
       if current_comment_count > 0
