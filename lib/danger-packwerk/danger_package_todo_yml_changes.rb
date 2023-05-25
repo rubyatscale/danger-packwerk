@@ -30,7 +30,7 @@ module DangerPackwerk
         before_comment: BeforeComment,
         max_comments: Integer,
         violation_types: T::Array[String],
-        base_root_directory: String
+        root_path: String
       ).void
     end
     def check(
@@ -38,17 +38,16 @@ module DangerPackwerk
       before_comment: DEFAULT_BEFORE_COMMENT,
       max_comments: DEFAULT_MAX_COMMENTS,
       violation_types: DEFAULT_VIOLATION_TYPES,
-      base_root_directory: nil
+      root_path: nil
     )
       offenses_formatter ||= Update::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
       org_name = github.pr_json[:base][:repo][:owner][:login]
 
-      # TODO: write explanation here
-      git_filesystem = Private::GitFilesystem.new(git: git, root: base_root_directory || '')
+      git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
       changed_package_todo_ymls = (git_filesystem.modified_files + git_filesystem.added_files + git_filesystem.deleted_files).grep(PACKAGE_TODO_PATTERN)
 
-      violation_diff = get_violation_diff(violation_types, base_root_directory: base_root_directory)
+      violation_diff = get_violation_diff(violation_types, root_path: root_path)
 
       before_comment.call(
         violation_diff,
@@ -75,14 +74,14 @@ module DangerPackwerk
     sig do
       params(
         violation_types: T::Array[String],
-        base_root_directory: T.nilable(String),
+        root_path: T.nilable(String)
       ).returns(ViolationDiff)
     end
-    def get_violation_diff(violation_types, base_root_directory: nil)
+    def get_violation_diff(violation_types, root_path: nil)
       added_violations = T.let([], T::Array[BasicReferenceOffense])
       removed_violations = T.let([], T::Array[BasicReferenceOffense])
 
-      git_filesystem = Private::GitFilesystem.new(git: git, root: base_root_directory || '')
+      git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
       git_filesystem.added_files.grep(PACKAGE_TODO_PATTERN).each do |added_package_todo_yml_file|
         # Since the file is added, we know on the base commit there are no violations related to this pack,
         # and that all violations from this file are new

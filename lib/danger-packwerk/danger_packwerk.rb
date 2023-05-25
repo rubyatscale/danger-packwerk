@@ -45,7 +45,7 @@ module DangerPackwerk
         on_failure: OnFailure,
         violation_types: T::Array[String],
         grouping_strategy: CommentGroupingStrategy,
-        base_root_directory: T.nilable(String)
+        root_path: T.nilable(String)
       ).void
     end
     def check(
@@ -56,7 +56,7 @@ module DangerPackwerk
       on_failure: DEFAULT_ON_FAILURE,
       violation_types: DEFAULT_VIOLATION_TYPES,
       grouping_strategy: CommentGroupingStrategy::PerConstantPerLocation,
-      base_root_directory: nil
+      root_path: nil
     )
       offenses_formatter ||= Check::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
@@ -71,7 +71,7 @@ module DangerPackwerk
       github.dismiss_out_of_range_messages
 
       # TODO: write explanation here
-      git_filesystem = Private::GitFilesystem.new(git: git, root: base_root_directory || '')
+      git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
 
       # https://github.com/danger/danger/blob/eca19719d3e585fe1cc46bc5377f9aa955ebf609/lib/danger/danger_core/plugins/dangerfile_git_plugin.rb#L80
       renamed_files_after = git_filesystem.renamed_files.map { |f| f[:after] }
