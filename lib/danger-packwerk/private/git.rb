@@ -3,12 +3,9 @@
 require 'code_ownership'
 require 'packs'
 
-# Use cases:
-#
-# 1. Read in the affected files from git
-# 2. Handle them relative to CWD inside of this package
-# 3. Print the report back to the main git repo using root
-#
+# In order to support running danger-packwerk from a non-root filepath, we need
+# to wrap some git functions in filesystem wrappers: packwerk runs relative to
+# the rails app root, whereas git returns paths on the actual filesystem.
 module DangerPackwerk
   module Private
     class GitFilesystem < T::Struct
