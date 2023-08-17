@@ -30,7 +30,7 @@ module DangerPackwerk
         before_comment: BeforeComment,
         max_comments: Integer,
         violation_types: T::Array[String],
-        root_path: String
+        root_path: T.nilable(String)
       ).void
     end
     def check(

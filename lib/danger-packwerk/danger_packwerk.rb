@@ -70,7 +70,6 @@ module DangerPackwerk
       # trigger the warning message, which is good, since we only want to trigger on new code.
       github.dismiss_out_of_range_messages
 
-      # TODO: write explanation here
       git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
 
       # https://github.com/danger/danger/blob/eca19719d3e585fe1cc46bc5377f9aa955ebf609/lib/danger/danger_core/plugins/dangerfile_git_plugin.rb#L80
@@ -138,8 +137,6 @@ module DangerPackwerk
         referencing_file = reference_offense.reference.relative_path
 
         message = offenses_formatter.format_offenses(unique_packwerk_reference_offenses, repo_link, org_name)
-
-        # TODO: comment about inverting git
         markdown(message, file: git_filesystem.convert_to_filesystem(referencing_file), line: line_number)
       end
 

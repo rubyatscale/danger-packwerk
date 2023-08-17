@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec::Matchers.define(:contain_inline_markdown) do |expected_visualized_message|
+RSpec::Matchers.define(:contain_inline_markdown) do |expected_visualized_message, overridden_filename|
   match do |file_with_markdown|
     # TODO: get this intelligently
     actual_markdowns = dangerfile.status_report[:markdowns]
@@ -17,20 +17,21 @@ RSpec::Matchers.define(:contain_inline_markdown) do |expected_visualized_message
       @expected_file_contents = expected_visualized_message.gsub(@expected_message_including_sigils, '').chomp
       @actual_file_contents = File.read(file_with_markdown)
       @expected_line = expected_visualized_message.split("\n").find_index { |line| line == @danger_start_sigil }
+      @expected_filename = overridden_filename || file_with_markdown
 
       [
         @matching_message = @markdown.message == @expected_message,
         @matching_line = @markdown.line == @expected_line,
-        @matching_file = @markdown.file == file_with_markdown,
+        @matching_file = @markdown.file == @expected_filename,
         @matching_file_contents = @expected_file_contents == @actual_file_contents
       ].all?
     end
   end
 
-  failure_message do |file_with_markdown|
+  failure_message do
     if @match.nil?
       <<~FAILURE_MESSAGE
-        Could not find matching markdown in #{file_with_markdown}. Make sure to use #{@danger_start_sigil} and #{@danger_end_sigil}
+        Could not find matching markdown in #{@expected_filename}. Make sure to use #{@danger_start_sigil} and #{@danger_end_sigil}
         at the beginning of your heredoc to match a markdown message.
       FAILURE_MESSAGE
     elsif !@matching_message
@@ -38,7 +39,7 @@ RSpec::Matchers.define(:contain_inline_markdown) do |expected_visualized_message
     elsif !@matching_line
       expect(@markdown.line).to eq @expected_line
     elsif !@matching_file
-      expect(@markdown.file).to eq file_with_markdown
+      expect(@markdown.file).to eq @expected_filename
     elsif !@matching_file_contents
       expect(@actual_file_contents).to eq @expected_file_contents
     end
