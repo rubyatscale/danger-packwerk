@@ -29,7 +29,7 @@ module DangerPackwerk
       subject do
         danger_package_todo_yml_changes.check(
           before_comment: before_comment,
-          root_path: root_path,
+          root_path: root_path
         )
       end
 
@@ -212,26 +212,26 @@ module DangerPackwerk
             subject
 
             expected_message = <<~EXPECTED
-                ---
-                packs/some_other_pack:
-                  "OtherPackClass":
-                    violations:
-                    - privacy
-                    - dependency
-                    files:
-                    - packs/some_pack/some_class.rb
-                ==================== DANGER_START
-                Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`, which is also not in `packs/some_pack`'s list of dependencies.
-                We noticed you ran `bin/packwerk update-todo`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
-  
-                - Could you add some context as a reply here about why we needed to add these violations?
-  
-                ==================== DANGER_END
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class.rb
+              ==================== DANGER_START
+              Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`, which is also not in `packs/some_pack`'s list of dependencies.
+              We noticed you ran `bin/packwerk update-todo`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
+
+              - Could you add some context as a reply here about why we needed to add these violations?
+
+              ==================== DANGER_END
             EXPECTED
 
-            expect("packs/some_pack/package_todo.yml").to contain_inline_markdown(
+            expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
               expected_message,
-              "#{root_path}packs/some_pack/package_todo.yml",
+              "#{root_path}packs/some_pack/package_todo.yml"
             ).and_nothing_else
           end
         end
