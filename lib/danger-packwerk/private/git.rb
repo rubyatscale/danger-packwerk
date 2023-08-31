@@ -14,11 +14,6 @@ module DangerPackwerk
       const :git, Danger::DangerfileGitPlugin
       const :root, String
 
-      sig { returns(T::Array[String]) }
-      def changed_files
-        convert_from_filesystem(@git.changed_files)
-      end
-
       sig { returns(T::Array[{ after: String, before: String }]) }
       def renamed_files
         @git.renamed_files.map do |f|
