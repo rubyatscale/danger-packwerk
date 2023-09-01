@@ -1,6 +1,7 @@
 # typed: strict
 
 require 'danger-packwerk/private/ownership_information'
+require 'danger-packwerk/private/todo_yml_changes'
 require 'constant_resolver'
 
 module DangerPackwerk

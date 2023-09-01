@@ -14,6 +14,7 @@ module DangerPackwerk
           'packs/some_pack' => 'Object'
         }
       end
+      let(:root_path) { nil }
 
       let(:before_comment) do
         lambda do |violation_diff, changed_package_todo_ymls|
@@ -27,11 +28,13 @@ module DangerPackwerk
 
       subject do
         danger_package_todo_yml_changes.check(
-          before_comment: before_comment
+          before_comment: before_comment,
+          root_path: root_path
         )
       end
 
       let(:some_pack_package_todo_before) { nil }
+      let(:diff_double) { sorbet_double(Git::Diff::DiffFile) }
 
       before do
         write_file('packs/some_pack/package.yml', <<~YML)
@@ -49,7 +52,8 @@ module DangerPackwerk
           enforce_dependencies: true
         YML
 
-        allow(danger_package_todo_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/package_todo.yml' => double(patch: 'some_fancy_patch') })
+        allow(diff_double).to receive(:patch).and_return('some_fancy_patch')
+        allow(danger_package_todo_yml_changes.git).to receive(:diff).and_return({ 'packs/some_pack/package_todo.yml' => diff_double })
 
         # After we make the system call to apply the inverse of the deletion patch, we should expect the file
         # to be present again, so we write it here as a means of stubbing out that call to `git`.
@@ -182,6 +186,52 @@ module DangerPackwerk
                 with types ["dependency", "privacy"],
                 ==================== DANGER_END
               EXPECTED
+            ).and_nothing_else
+          end
+        end
+
+        context 'for a pack with non-root location' do
+          before do
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class.rb
+            YML
+          end
+
+          let(:root_path) { 'parent_folder/' }
+          let(:modified_files) { ["#{root_path}app/models/employee.rb"] }
+          let(:added_files) { ["#{root_path}packs/some_pack/package_todo.yml"] }
+
+          it 'displays a markdown with a reasonable message' do
+            subject
+
+            expected_message = <<~EXPECTED
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  - dependency
+                  files:
+                  - packs/some_pack/some_class.rb
+              ==================== DANGER_START
+              Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`, which is also not in `packs/some_pack`'s list of dependencies.
+              We noticed you ran `bin/packwerk update-todo`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
+
+              - Could you add some context as a reply here about why we needed to add these violations?
+
+              ==================== DANGER_END
+            EXPECTED
+
+            expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
+              expected_message,
+              "#{root_path}packs/some_pack/package_todo.yml"
             ).and_nothing_else
           end
         end

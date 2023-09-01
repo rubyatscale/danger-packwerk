@@ -8,6 +8,7 @@ module DangerPackwerk
           'packs/some_pack' => 'Object'
         }
       end
+      let(:root_path) { nil }
 
       before do
         # These paths need to exist for ConstantResolver
@@ -35,7 +36,10 @@ module DangerPackwerk
           end
         end
         let(:packwerk_check) do
-          packwerk.check(offenses_formatter: formatter.new)
+          packwerk.check(
+            offenses_formatter: formatter.new,
+            root_path: root_path
+          )
         end
         let(:offenses) { [] }
         let(:files_for_packwerk) { ['packs/referencing_pack/some_file.rb'] }
@@ -175,6 +179,53 @@ module DangerPackwerk
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
             expect(actual_markdown.type).to eq :markdown
+          end
+        end
+
+        context 'when app is in a subfolder in git repo' do
+          let(:root_path) { 'parent_folder/' }
+          let(:modified_files) { ["#{root_path}packs/referencing_pack/some_file.rb"] }
+          let(:offenses) { [generic_dependency_violation, generic_privacy_violation] }
+
+          before { write_file('packs/referencing_pack/some_file.rb') }
+
+          it 'leaves an inline comment helping the user figure out what to do next' do
+            packwerk_check
+
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 1
+            actual_markdown = actual_markdowns.first
+            expect(actual_markdown.message).to eq "Vanilla message about dependency violations\n\nVanilla message about privacy violations"
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq "#{root_path}packs/referencing_pack/some_file.rb"
+            expect(actual_markdown.type).to eq :markdown
+          end
+
+          context 'when the failure is in a renamed file' do
+            before { write_file('packs/referencing_pack/some_file.rb') }
+
+            let(:renamed_file) { "#{root_path}packs/referencing_pack/some_file.rb" }
+            let(:modified_file) { "#{root_path}packs/referencing_pack/some_file_with_old_name.rb" }
+
+            let(:modified_files) { [modified_file] }
+            let(:renamed_files) { [{ before: modified_file, after: renamed_file.to_s }] }
+
+            let(:offenses) { [generic_privacy_violation] }
+
+            it 'leaves an inline comment helping the user figure out what to do next' do
+              packwerk_check
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expect(actual_markdown.message).to eq 'Vanilla message about privacy violations'
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq "#{root_path}packs/referencing_pack/some_file.rb"
+              expect(actual_markdown.type).to eq :markdown
+            end
           end
         end
 
