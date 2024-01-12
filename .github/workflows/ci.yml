@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@8230315d06ad95c617244d2f265d237a1682d445
       - name: Set up Ruby ${{ matrix.ruby }}
-        uses: ruby/setup-ruby@eae47962baca661befdfd24e4d6c34ade04858f7
+        uses: ruby/setup-ruby@360dc864d5da99d54fcb8e9148c14a84b90d3e88
         with:
           bundler-cache: true
           ruby-version: ${{ matrix.ruby }}
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@8230315d06ad95c617244d2f265d237a1682d445
       - name: Set up Ruby
-        uses: ruby/setup-ruby@eae47962baca661befdfd24e4d6c34ade04858f7
+        uses: ruby/setup-ruby@360dc864d5da99d54fcb8e9148c14a84b90d3e88
         with:
           bundler-cache: true
           ruby-version: head
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@8230315d06ad95c617244d2f265d237a1682d445
       - name: Set up Ruby
-        uses: ruby/setup-ruby@eae47962baca661befdfd24e4d6c34ade04858f7
+        uses: ruby/setup-ruby@360dc864d5da99d54fcb8e9148c14a84b90d3e88
         with:
           bundler-cache: true
           ruby-version: head
