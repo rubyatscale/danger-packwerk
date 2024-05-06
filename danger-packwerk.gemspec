@@ -31,6 +31,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'code_ownership'
   spec.add_dependency 'danger-plugin-api', '~> 1.0'
+  spec.add_dependency 'packs'
   spec.add_dependency 'packwerk'
   spec.add_dependency 'parse_packwerk'
   spec.add_dependency 'sorbet-runtime'
@@ -39,8 +40,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'pry'
   spec.add_development_dependency 'rake'
   spec.add_development_dependency 'rspec', '~> 3.0'
-  spec.add_development_dependency 'rubocop'
-  spec.add_development_dependency 'rubocop-sorbet'
+  spec.add_development_dependency 'rubocop', '~> 1.26.0'
+  spec.add_development_dependency 'rubocop-sorbet', '~> 0.6.0'
   spec.add_development_dependency 'sorbet'
   spec.add_development_dependency 'tapioca'
 end
