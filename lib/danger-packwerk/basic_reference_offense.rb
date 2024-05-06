@@ -88,8 +88,13 @@ module DangerPackwerk
           # the constant and only the constant.
           # Right now `packwerk` `package_todo.yml` files typically use double quotes, but sometimes folks linters change this to single quotes.
           # To be defensive, we match against either.
-          class_name_with_quote_boundaries = /["|']#{violation.class_name}["|']:/
-          line.match?(class_name_with_quote_boundaries)
+
+          patterns = [
+            /["|']#{violation.class_name}["|']:/,
+            /\? ["|']#{violation.class_name}["|']$/ # for keys that use explicit mapping syntax
+          ]
+
+          patterns.any? { |p| line.match?(p) }
         end
 
         if class_name_line_number.nil?
