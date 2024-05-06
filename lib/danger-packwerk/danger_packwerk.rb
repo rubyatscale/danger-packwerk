@@ -23,9 +23,9 @@ module DangerPackwerk
     DEFAULT_FAIL = false
     DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
     DEFAULT_VIOLATION_TYPES = T.let([
-                                      DEPENDENCY_VIOLATION_TYPE,
-                                      PRIVACY_VIOLATION_TYPE
-                                    ], T::Array[String])
+      DEPENDENCY_VIOLATION_TYPE,
+      PRIVACY_VIOLATION_TYPE
+    ].freeze, T::Array[String])
 
     class CommentGroupingStrategy < ::T::Enum
       enums do

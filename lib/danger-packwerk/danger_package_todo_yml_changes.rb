@@ -20,9 +20,9 @@ module DangerPackwerk
     BeforeComment = T.type_alias { T.proc.params(violation_diff: ViolationDiff, changed_package_todo_ymls: T::Array[String]).void }
     DEFAULT_BEFORE_COMMENT = T.let(->(violation_diff, changed_package_todo_ymls) {}, BeforeComment)
     DEFAULT_VIOLATION_TYPES = T.let([
-                                      DEPENDENCY_VIOLATION_TYPE,
-                                      PRIVACY_VIOLATION_TYPE
-                                    ], T::Array[String])
+      DEPENDENCY_VIOLATION_TYPE,
+      PRIVACY_VIOLATION_TYPE
+    ].freeze, T::Array[String])
 
     sig do
       params(
