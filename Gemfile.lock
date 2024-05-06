@@ -18,7 +18,7 @@ GIT
 PATH
   remote: .
   specs:
-    danger-packwerk (0.14.2)
+    danger-packwerk (0.14.3)
       code_ownership
       danger-plugin-api (~> 1.0)
       packs
