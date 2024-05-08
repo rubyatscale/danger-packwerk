@@ -74,11 +74,11 @@ module DangerPackwerk
     sig do
       params(
         violation_types: T::Array[String],
-        git: T.nilable(Danger::DangerfileGitPlugin),
+        git: Danger::DangerfileGitPlugin,
         root_path: T.nilable(String)
       ).returns(ViolationDiff)
     end
-    def self.get_violation_diff(violation_types, git: nil, root_path: nil)
+    def self.get_violation_diff(violation_types, git:, root_path: nil)
       git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
 
       added_violations, removed_violations = Private::TodoYmlChanges.get_reference_offenses(
