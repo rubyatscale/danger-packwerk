@@ -47,7 +47,7 @@ module DangerPackwerk
       git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
       changed_package_todo_ymls = (git_filesystem.modified_files + git_filesystem.added_files + git_filesystem.deleted_files).grep(PACKAGE_TODO_PATTERN)
 
-      violation_diff = get_violation_diff(violation_types, root_path: root_path)
+      violation_diff = DangerPackageTodoYmlChanges.get_violation_diff(violation_types, git: git, root_path: root_path)
 
       before_comment.call(
         violation_diff,
@@ -74,10 +74,11 @@ module DangerPackwerk
     sig do
       params(
         violation_types: T::Array[String],
+        git: Danger::DangerfileGitPlugin,
         root_path: T.nilable(String)
       ).returns(ViolationDiff)
     end
-    def get_violation_diff(violation_types, root_path: nil)
+    def self.get_violation_diff(violation_types, git:, root_path: nil)
       git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
 
       added_violations, removed_violations = Private::TodoYmlChanges.get_reference_offenses(
