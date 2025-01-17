@@ -14,10 +14,11 @@ module DangerPackwerk
         abstract.params(
           offenses: T::Array[BasicReferenceOffense],
           repo_link: String,
-          org_name: String
+          org_name: String,
+          modularization_library: String
         ).returns(String)
       end
-      def format_offenses(offenses, repo_link, org_name); end
+      def format_offenses(offenses, repo_link, org_name, modularization_library: 'packwerk'); end
     end
   end
 end

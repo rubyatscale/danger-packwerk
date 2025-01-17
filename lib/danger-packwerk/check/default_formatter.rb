@@ -21,10 +21,11 @@ module DangerPackwerk
         override.params(
           offenses: T::Array[Packwerk::ReferenceOffense],
           repo_link: String,
-          org_name: String
+          org_name: String,
+          modularization_library: String
         ).returns(String)
       end
-      def format_offenses(offenses, repo_link, org_name)
+      def format_offenses(offenses, repo_link, org_name, modularization_library: 'packwerk')
         reference_offense = T.must(offenses.first)
         violation_types = offenses.map(&:violation_type)
         referencing_file = reference_offense.reference.relative_path

@@ -139,6 +139,34 @@ module DangerPackwerk
               EXPECTED
             ).and_nothing_else
           end
+
+          context 'a modularization_library is passed in' do
+            let!(:modularization_library) { 'pks' }
+
+            it 'displays a markdown with a reasonable message' do
+              subject
+
+              expect('packs/some_pack/package_todo.yml').to contain_inline_markdown(
+                <<~EXPECTED
+                  ---
+                  packs/some_other_pack:
+                    "OtherPackClass":
+                      violations:
+                      - privacy
+                      - dependency
+                      files:
+                      - packs/some_pack/some_class.rb
+                  ==================== DANGER_START
+                  Hi again! It looks like `OtherPackClass` is private API of `packs/some_other_pack`, which is also not in `packs/some_pack`'s list of dependencies.
+                  We noticed you ran `bin/packwerk update-todo`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.
+
+                  - Could you add some context as a reply here about why we needed to add these violations?
+
+                  ==================== DANGER_END
+                EXPECTED
+              ).and_nothing_else
+            end
+          end
         end
 
         context 'a offenses formatter is passed in' do
@@ -146,7 +174,7 @@ module DangerPackwerk
             Class.new do
               include Update::OffensesFormatter
 
-              def format_offenses(added_violations, repo_link, org_name)
+              def format_offenses(added_violations, repo_link, org_name, modularization_library: 'packwerk')
                 <<~MESSAGE
                   There are #{added_violations.count} new violations,
                   with class_names #{added_violations.map(&:class_name).uniq.sort},
@@ -1160,7 +1188,7 @@ module DangerPackwerk
             Class.new do
               include Update::OffensesFormatter
 
-              def format_offenses(added_violations, repo_link, org_name)
+              def format_offenses(added_violations, repo_link, org_name, modularization_library: 'packwerk')
                 <<~MESSAGE
                   There are #{added_violations.count} new violations,
                   with class_names #{added_violations.map(&:class_name).uniq.sort},
