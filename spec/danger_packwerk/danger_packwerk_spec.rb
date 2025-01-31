@@ -30,7 +30,7 @@ module DangerPackwerk
           Class.new do
             include Check::OffensesFormatter
 
-            def format_offenses(offenses, repo_link, org_name)
+            def format_offenses(offenses, repo_link, org_name, modularization_library:)
               offenses.map(&:message).join("\n\n")
             end
           end
@@ -775,7 +775,8 @@ module DangerPackwerk
             grouping_strategy: DangerPackwerk::PerConstantPerPackGrouping,
             offenses_formatter: Check::DefaultFormatter.new(
               custom_help_message: 'Need help? Join us in #ruby-modularity or see go/packs.'
-            )
+            ),
+            modularization_library: modularization_library
           )
         end
 
@@ -816,6 +817,7 @@ module DangerPackwerk
           YML
         end
 
+        let(:modularization_library) { 'packwerk' }
         let(:danger_packwerk) { dangerfile.packwerk }
         let(:generic_privacy_violation) do
           sorbet_double(
@@ -887,6 +889,46 @@ module DangerPackwerk
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
             expect(actual_markdown.type).to eq :markdown
+          end
+
+          context 'modularization_library is pks' do
+            let(:modularization_library) { 'pks' }
+
+            it 'uses the pks update command' do
+              subject
+              expect(dangerfile.status_report[:warnings]).to be_empty
+              expect(dangerfile.status_report[:errors]).to be_empty
+              actual_markdowns = dangerfile.status_report[:markdowns]
+              expect(actual_markdowns.count).to eq 1
+              actual_markdown = actual_markdowns.first
+              expected = <<~EXPECTED
+                **Packwerk Violation**
+                - Type: Privacy :lock:
+                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+                - Owning pack: packs/gusto_slack
+                  - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
+
+                <details><summary>Quick suggestions :bulb:</summary>
+
+                Before you run `bin/pks update`, check out these quick suggestions:
+                - Does the code you are writing live in the right pack?
+                  - If not, try `bin/packs move packs/destination_pack packs/referencing_package/some_file.rb`
+                - Does PrivateConstant live in the right pack?
+                  - If not, try `bin/packs move packs/destination_pack packs/gusto_slack/app/services/private_constant.rb`
+                - Does API in packs/gusto_slack/public support this use case?
+                  - If not, can we work with [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) to create and use a public API?
+                  - If `PrivateConstant` should already be public, try `bin/packs make_public packs/gusto_slack/app/services/private_constant.rb`.
+
+                </details>
+
+                _Need help? Join us in #ruby-modularity or see go/packs._
+              EXPECTED
+
+              expect(actual_markdown.message).to eq expected
+              expect(actual_markdown.line).to eq 12
+              expect(actual_markdown.file).to eq 'packs/referencing_package/some_file.rb'
+              expect(actual_markdown.type).to eq :markdown
+            end
           end
 
           context 'there is no owning team' do

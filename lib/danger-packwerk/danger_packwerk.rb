@@ -45,7 +45,8 @@ module DangerPackwerk
         on_failure: OnFailure,
         violation_types: T::Array[String],
         grouping_strategy: CommentGroupingStrategy,
-        root_path: T.nilable(String)
+        root_path: T.nilable(String),
+        modularization_library: String
       ).void
     end
     def check(
@@ -56,7 +57,8 @@ module DangerPackwerk
       on_failure: DEFAULT_ON_FAILURE,
       violation_types: DEFAULT_VIOLATION_TYPES,
       grouping_strategy: CommentGroupingStrategy::PerConstantPerLocation,
-      root_path: nil
+      root_path: nil,
+      modularization_library: 'packwerk'
     )
       offenses_formatter ||= Check::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
@@ -136,7 +138,12 @@ module DangerPackwerk
         line_number = reference_offense.location&.line
         referencing_file = reference_offense.reference.relative_path
 
-        message = offenses_formatter.format_offenses(unique_packwerk_reference_offenses, repo_link, org_name)
+        message = offenses_formatter.format_offenses(
+          unique_packwerk_reference_offenses,
+          repo_link,
+          org_name,
+          modularization_library: modularization_library
+        )
         markdown(message, file: git_filesystem.convert_to_filesystem(referencing_file), line: line_number)
       end
 
