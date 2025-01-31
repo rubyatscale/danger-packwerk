@@ -30,7 +30,8 @@ module DangerPackwerk
         before_comment: BeforeComment,
         max_comments: Integer,
         violation_types: T::Array[String],
-        root_path: T.nilable(String)
+        root_path: T.nilable(String),
+        modularization_library: String
       ).void
     end
     def check(
@@ -38,7 +39,8 @@ module DangerPackwerk
       before_comment: DEFAULT_BEFORE_COMMENT,
       max_comments: DEFAULT_MAX_COMMENTS,
       violation_types: DEFAULT_VIOLATION_TYPES,
-      root_path: nil
+      root_path: nil,
+      modularization_library: 'packwerk'
     )
       offenses_formatter ||= Update::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
@@ -62,7 +64,7 @@ module DangerPackwerk
         location = T.must(violations.first).file_location
 
         markdown(
-          offenses_formatter.format_offenses(violations, repo_link, org_name),
+          offenses_formatter.format_offenses(violations, repo_link, org_name, modularization_library: modularization_library),
           line: location.line_number,
           file: git_filesystem.convert_to_filesystem(location.file)
         )

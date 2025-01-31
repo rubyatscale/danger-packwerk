@@ -15,8 +15,8 @@ module DangerPackwerk
         @custom_help_message = custom_help_message
       end
 
-      sig { override.params(offenses: T::Array[BasicReferenceOffense], repo_link: String, org_name: String).returns(String) }
-      def format_offenses(offenses, repo_link, org_name)
+      sig { override.params(offenses: T::Array[BasicReferenceOffense], repo_link: String, org_name: String, modularization_library: String).returns(String) }
+      def format_offenses(offenses, repo_link, org_name, modularization_library: 'packwerk')
         violation = T.must(offenses.first)
         referencing_file_pack = ParsePackwerk.package_from_path(violation.file)
         # We remove leading double colons as they feel like an implementation detail of packwerk.
@@ -28,7 +28,11 @@ module DangerPackwerk
 
         package_referring_to_constant_owner = Private::OwnershipInformation.for_package(referencing_file_pack, org_name)
 
-        disclaimer = 'We noticed you ran `bin/packwerk update-todo`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.'
+        if modularization_library == 'packwerk'
+          disclaimer = 'We noticed you ran `bin/packwerk update-todo`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.'
+        elsif modularization_library == 'pks'
+          disclaimer = 'We noticed you ran `bin/pks update`. Check out [the docs](https://github.com/Shopify/packwerk/blob/main/RESOLVING_VIOLATIONS.md) to see other ways to resolve violations.'
+        end
         pluralized_violation = offenses.count > 1 ? 'these violations' : 'this violation'
         request_to_add_context = "- Could you add some context as a reply here about why we needed to add #{pluralized_violation}?\n"
 

@@ -21,10 +21,11 @@ module DangerPackwerk
         override.params(
           offenses: T::Array[Packwerk::ReferenceOffense],
           repo_link: String,
-          org_name: String
+          org_name: String,
+          modularization_library: String
         ).returns(String)
       end
-      def format_offenses(offenses, repo_link, org_name)
+      def format_offenses(offenses, repo_link, org_name, modularization_library: 'packwerk')
         reference_offense = T.must(offenses.first)
         violation_types = offenses.map(&:violation_type)
         referencing_file = reference_offense.reference.relative_path
@@ -38,7 +39,11 @@ module DangerPackwerk
         constant_source_package = T.must(ParsePackwerk.all.find { |p| p.name == constant_source_package_name })
         constant_source_package_ownership_info = Private::OwnershipInformation.for_package(constant_source_package, org_name)
 
-        disclaimer = 'Before you run `bin/packwerk update-todo`, check out these quick suggestions:'
+        if modularization_library == 'packwerk'
+          disclaimer = 'Before you run `bin/packwerk update-todo`, check out these quick suggestions:'
+        elsif modularization_library == 'pks'
+          disclaimer = 'Before you run `bin/pks update`, check out these quick suggestions:'
+        end
         referencing_code_in_right_pack = "- Does the code you are writing live in the right pack?\n  - If not, try `bin/packs move packs/destination_pack #{referencing_file}`"
         referenced_code_in_right_pack = "- Does #{constant_name} live in the right pack?\n  - If not, try `bin/packs move packs/destination_pack #{constant_location}`"
         dependency_violation_message = "- Do we actually want to depend on #{constant_source_package_name}?\n  - If so, try `bin/packs add_dependency #{referencing_file_pack} #{constant_source_package_name}`\n  - If not, what can we change about the design so we do not have to depend on #{constant_source_package_name}?"
