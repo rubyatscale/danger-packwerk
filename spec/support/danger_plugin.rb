@@ -24,5 +24,9 @@ RSpec.shared_context 'danger plugin' do
     allow(plugin).to receive(:git).and_return(mock_git)
 
     allow(plugin.github).to receive(:pr_json).and_return(pr_json)
+    allow(plugin.github).to receive(:html_link) do |location|
+      href = "#{pr_json[:base][:repo][:html_url]}/blob/main/#{location}"
+      "<a href=#{href}>#{location}</a>"
+    end
   end
 end

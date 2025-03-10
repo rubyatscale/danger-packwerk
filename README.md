@@ -43,8 +43,8 @@ class MyFormatter
   extend T::Sig
   include DangerPackwerk::Check::OffensesFormatter
   # Packwerk::ReferenceOffense: https://github.com/Shopify/packwerk/blob/main/lib/packwerk/reference_offense.rb
-  sig { override.params(offenses: T::Array[Packwerk::ReferenceOffense], repo_link: String, org_name: String).returns(String) }
-  def format_offenses(offenses, repo_link, org_name)
+  sig { override.params(offenses: T::Array[Packwerk::ReferenceOffense], plugin: Danger::Plugin, org_name: String).returns(String) }
+  def format_offenses(offenses, plugin, org_name)
     # your logic here
   end
 end
@@ -98,8 +98,8 @@ class MyFormatter
   extend T::Sig
   include DangerPackwerk::Update::OffensesFormatter
   # DangerPackwerk::BasicReferenceOffense
-  sig { override.params(offenses: T::Array[DangerPackwerk::BasicReferenceOffense], repo_link: String, org_name: String).returns(String) }
-  def format_offenses(offenses, repo_link, org_name)
+  sig { override.params(offenses: T::Array[DangerPackwerk::BasicReferenceOffense], plugin: Danger::Plugin, org_name: String).returns(String) }
+  def format_offenses(offenses, plugin, org_name)
     # your logic here
   end
 end

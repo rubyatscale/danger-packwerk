@@ -146,7 +146,7 @@ module DangerPackwerk
             Class.new do
               include Update::OffensesFormatter
 
-              def format_offenses(added_violations, repo_link, org_name)
+              def format_offenses(added_violations, plugin, org_name)
                 <<~MESSAGE
                   There are #{added_violations.count} new violations,
                   with class_names #{added_violations.map(&:class_name).uniq.sort},
@@ -1160,7 +1160,7 @@ module DangerPackwerk
             Class.new do
               include Update::OffensesFormatter
 
-              def format_offenses(added_violations, repo_link, org_name)
+              def format_offenses(added_violations, plugin, org_name)
                 <<~MESSAGE
                   There are #{added_violations.count} new violations,
                   with class_names #{added_violations.map(&:class_name).uniq.sort},

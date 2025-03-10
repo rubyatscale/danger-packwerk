@@ -15,8 +15,8 @@ module DangerPackwerk
         @custom_help_message = custom_help_message
       end
 
-      sig { override.params(offenses: T::Array[BasicReferenceOffense], repo_link: String, org_name: String).returns(String) }
-      def format_offenses(offenses, repo_link, org_name)
+      sig { override.params(offenses: T::Array[BasicReferenceOffense], plugin: Danger::Plugin, org_name: String).returns(String) }
+      def format_offenses(offenses, plugin, org_name)
         violation = T.must(offenses.first)
         referencing_file_pack = ParsePackwerk.package_from_path(violation.file)
         # We remove leading double colons as they feel like an implementation detail of packwerk.
