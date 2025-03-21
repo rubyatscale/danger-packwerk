@@ -7,6 +7,7 @@ AllCops:
   NewCops: enable
   Exclude:
     - bin/**/*
+    - vendor/**/*
 
 Sorbet/StrictSigil:
   Enabled: true
