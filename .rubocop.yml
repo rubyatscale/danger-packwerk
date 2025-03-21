@@ -1,4 +1,3 @@
-inherit_gem:
 require:
   - rubocop-sorbet
 
