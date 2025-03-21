@@ -4,6 +4,8 @@ module DangerPackwerk
   RSpec.describe DangerPackageTodoYmlChanges do
     describe '#check' do
       let(:danger_package_todo_yml_changes) { dangerfile.package_todo_yml_changes }
+      let(:some_pack_package_todo_before) { nil }
+      let(:diff_double) { sorbet_double(Git::Diff::DiffFile) }
       let(:plugin) { danger_package_todo_yml_changes }
       let(:slack_notifier) do
         double(notify_slack: true)
@@ -32,9 +34,6 @@ module DangerPackwerk
           root_path: root_path
         )
       end
-
-      let(:some_pack_package_todo_before) { nil }
-      let(:diff_double) { sorbet_double(Git::Diff::DiffFile) }
 
       before do
         write_file('packs/some_pack/package.yml', <<~YML)

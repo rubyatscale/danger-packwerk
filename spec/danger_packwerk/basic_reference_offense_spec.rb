@@ -34,7 +34,7 @@ module DangerPackwerk
     # * https://github.com/prettier/prettier/issues/5599
     # * https://github.com/jeremyfa/yaml.js/issues/128
     it 'can parse yaml that contains explicit mapping syntax' do
-      offenses = BasicReferenceOffense.from(package_todo_yml)
+      offenses = described_class.from(package_todo_yml)
       expect(offenses.count).to eq(2)
     end
   end

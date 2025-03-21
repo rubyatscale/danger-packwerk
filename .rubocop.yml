@@ -1,6 +1,7 @@
 inherit_gem:
-require:
+plugins:
   - rubocop-sorbet
+  - rubocop-performance
 
 AllCops:
   TargetRubyVersion: 2.6
