@@ -58,7 +58,7 @@ module DangerPackwerk
           Class.new do
             include Check::OffensesFormatter
 
-            def format_offenses(offenses, repo_link, org_name)
+            def format_offenses(offenses, repo_link, org_name, repo_url_builder: nil)
               offenses.map(&:message).join("\n\n")
             end
           end

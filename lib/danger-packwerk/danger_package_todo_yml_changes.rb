@@ -42,6 +42,7 @@ module DangerPackwerk
     )
       offenses_formatter ||= Update::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
+      repo_url_builder = ->(constant_path) { "#{github.pr_json[:base][:repo][:html_url]}/blob/main/#{constant_path}" }
       org_name = github.pr_json[:base][:repo][:owner][:login]
 
       git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')
@@ -62,7 +63,7 @@ module DangerPackwerk
         location = T.must(violations.first).file_location
 
         markdown(
-          offenses_formatter.format_offenses(violations, repo_link, org_name),
+          offenses_formatter.format_offenses(violations, repo_link, org_name, repo_url_builder: repo_url_builder),
           line: location.line_number,
           file: git_filesystem.convert_to_filesystem(location.file)
         )
