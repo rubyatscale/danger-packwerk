@@ -42,7 +42,7 @@ module DangerPackwerk
     )
       offenses_formatter ||= Update::DefaultFormatter.new
       repo_link = github.pr_json[:base][:repo][:html_url]
-      repo_url_builder = ->(constant_path) { "#{repo_link}/blob/main/#{constant_path}" }
+      repo_url_builder = ->(constant_path) { "#{repo_link}/blob/#{github.pr_json[:head][:ref]}/#{constant_path}" }
       org_name = github.pr_json[:base][:repo][:owner][:login]
 
       git_filesystem = Private::GitFilesystem.new(git: git, root: root_path || '')

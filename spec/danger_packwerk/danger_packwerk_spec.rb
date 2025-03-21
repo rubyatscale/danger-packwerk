@@ -859,7 +859,7 @@ module DangerPackwerk
             expected = <<~EXPECTED
               **Packwerk Violation**
               - Type: Privacy :lock:
-              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/my_branch/packs/gusto_slack/app/services/private_constant.rb)
               - Owning pack: packs/gusto_slack
                 - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
@@ -900,7 +900,7 @@ module DangerPackwerk
               expected = <<~EXPECTED
                 **Packwerk Violation**
                 - Type: Privacy :lock:
-                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/my_branch/packs/gusto_slack/app/services/private_constant.rb)
                 - Owning pack: packs/gusto_slack
                   - This pack is unowned.
 
@@ -943,7 +943,7 @@ module DangerPackwerk
             expected = <<~EXPECTED
               **Packwerk Violation**
               - Type: Dependency :knot:
-              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/my_branch/packs/gusto_slack/app/services/private_constant.rb)
               - Owning pack: packs/gusto_slack
                 - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
@@ -984,7 +984,7 @@ module DangerPackwerk
             expected = <<~EXPECTED
               **Packwerk Violation**
               - Type: Privacy :lock: + Dependency :knot:
-              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+              - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/my_branch/packs/gusto_slack/app/services/private_constant.rb)
               - Owning pack: packs/gusto_slack
                 - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
@@ -1057,7 +1057,7 @@ module DangerPackwerk
               expected = <<~EXPECTED
                 **Packwerk Violation**
                 - Type: Privacy :lock:
-                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/main/packs/gusto_slack/app/services/private_constant.rb)
+                - Constant: [<ins>`PrivateConstant`</ins>](https://github.com/MyOrg/my_repo/blob/my_branch/packs/gusto_slack/app/services/private_constant.rb)
                 - Owning pack: packs/gusto_slack
                   - Owned by [<ins>@MyOrg/product-infrastructure</ins>](https://github.com/orgs/MyOrg/teams/product-infrastructure/members) (Slack: [<ins>#prod-infra</ins>](https://slack.com/app_redirect?channel=prod-infra))
 
