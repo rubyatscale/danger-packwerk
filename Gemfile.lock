@@ -135,13 +135,13 @@ GEM
       uri
     netrc (0.11.0)
     no_proxy_fix (0.1.2)
-    nokogiri (1.16.4-aarch64-linux)
+    nokogiri (1.18.5-aarch64-linux-gnu)
       racc (~> 1.4)
-    nokogiri (1.16.4-arm64-darwin)
+    nokogiri (1.18.5-arm64-darwin)
       racc (~> 1.4)
-    nokogiri (1.16.4-x86_64-darwin)
+    nokogiri (1.18.5-x86_64-darwin)
       racc (~> 1.4)
-    nokogiri (1.16.4-x86_64-linux)
+    nokogiri (1.18.5-x86_64-linux-gnu)
       racc (~> 1.4)
     octokit (8.1.0)
       base64
@@ -311,4 +311,4 @@ DEPENDENCIES
   tapioca
 
 BUNDLED WITH
-   2.5.6
+   2.6.6
