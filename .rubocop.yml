@@ -5,6 +5,8 @@ require:
 AllCops:
   TargetRubyVersion: 2.6
   NewCops: enable
+  Exclude:
+    - bin/**/*
 
 Sorbet/StrictSigil:
   Enabled: true
