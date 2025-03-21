@@ -6,4 +6,3 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'packwerk', github: 'Shopify/packwerk', branch: 'main'
-gem 'railties'
