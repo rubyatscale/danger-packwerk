@@ -46,11 +46,12 @@ module DangerPackwerk
         team_to_work_with = constant_source_package_ownership_info.owning_team ? constant_source_package_ownership_info.markdown_link_to_github_members_no_tag : 'the pack owner'
         privacy_violation_message = "- Does API in #{constant_source_package.name}/public support this use case?\n  - If not, can we work with #{team_to_work_with} to create and use a public API?\n  - If `#{constant_name}` should already be public, try `bin/packs make_public #{constant_location}`."
 
-        if repo_url_builder
-          constant_location_url = repo_url_builder.call(constant_location)
-        else
-          constant_location_url = "#{repo_link}/blob/main/#{constant_location}"
-        end
+        constant_location_url =
+          if repo_url_builder
+            repo_url_builder.call(constant_location)
+          else
+            "#{repo_link}/blob/main/#{constant_location}"
+          end
 
         if violation_types.include?(::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE) && violation_types.include?(::DangerPackwerk::PRIVACY_VIOLATION_TYPE)
           <<~MESSAGE
