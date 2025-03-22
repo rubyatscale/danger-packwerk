@@ -25,6 +25,34 @@ module DangerPackwerk
 
       context 'using inputted formatter' do
         let(:packwerk) { dangerfile.packwerk }
+        let(:constant) do
+          sorbet_double(Packwerk::ConstantContext, location: Packwerk::Node::Location.new(12, 5), package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
+        end
+        let(:generic_dependency_violation) do
+          sorbet_double(
+            Packwerk::ReferenceOffense,
+            reference: reference,
+            violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
+            message: 'Vanilla message about dependency violations',
+            location: Packwerk::Node::Location.new(12, 5)
+          )
+        end
+        let(:generic_privacy_violation) do
+          sorbet_double(
+            Packwerk::ReferenceOffense,
+            reference: reference,
+            violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
+            message: 'Vanilla message about privacy violations',
+            location: Packwerk::Node::Location.new(12, 5)
+          )
+        end
+        let(:reference) do
+          sorbet_double(
+            Packwerk::Reference,
+            relative_path: 'packs/referencing_pack/some_file.rb',
+            constant: constant
+          )
+        end
         let(:plugin) { packwerk }
         let(:formatter) do
           Class.new do
@@ -54,38 +82,6 @@ module DangerPackwerk
           allow_any_instance_of(PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
         end
 
-        let(:constant) do
-          sorbet_double(Packwerk::ConstantContext, location: Packwerk::Node::Location.new(12, 5), package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
-        end
-
-        let(:generic_dependency_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
-            reference: reference,
-            violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
-            message: 'Vanilla message about dependency violations',
-            location: Packwerk::Node::Location.new(12, 5)
-          )
-        end
-
-        let(:generic_privacy_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
-            reference: reference,
-            violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
-            message: 'Vanilla message about privacy violations',
-            location: Packwerk::Node::Location.new(12, 5)
-          )
-        end
-
-        let(:reference) do
-          sorbet_double(
-            Packwerk::Reference,
-            relative_path: 'packs/referencing_pack/some_file.rb',
-            constant: constant
-          )
-        end
-
         context 'when there are syntax errors in analyzed files' do
           let(:offenses) { [sorbet_double(Packwerk::Parsers::ParseResult)] }
 
@@ -102,7 +98,7 @@ module DangerPackwerk
           let(:modified_files) { [write_file('frontend/javascript/some_file.js').to_s] }
 
           it 'leaves an inline comment helping the user figure out what to do next' do
-            expect_any_instance_of(Packwerk::Cli).to_not receive(:execute_command)
+            expect_any_instance_of(Packwerk::Cli).not_to receive(:execute_command)
             packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
@@ -785,7 +781,7 @@ module DangerPackwerk
           write_package_yml('packs/gusto_slack')
 
           allow(CodeOwnership).to receive(:for_package) do |package|
-            if package.name == 'packs/referencing_package' # rubocop:disable Style/CaseLikeIf:
+            if package.name == 'packs/referencing_package' # :
               CodeTeams.find('Other Team')
             elsif package.name == 'packs/gusto_slack'
               CodeTeams.find('Product Infrastructure Backend')

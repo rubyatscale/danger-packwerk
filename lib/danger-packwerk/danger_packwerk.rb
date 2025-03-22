@@ -36,6 +36,10 @@ module DangerPackwerk
 
     PerConstantPerPackGrouping = CommentGroupingStrategy::PerConstantPerPack
 
+    # We probably want to check the `include` key of `packwerk.yml`. By default, this value is "**/*.{rb,rake,erb}",
+    # so we hardcode this in for now. If this blocks a user, we can take that opportunity to read from `packwerk.yml`.
+    TARGETED_FILES_EXTENSIONS = T.let(%w[.erb .rake .rb].freeze, T::Array[String])
+
     sig do
       params(
         offenses_formatter: T.nilable(Check::OffensesFormatter),
@@ -80,7 +84,7 @@ module DangerPackwerk
 
         # We probably want to check the `include` key of `packwerk.yml`. By default, this value is "**/*.{rb,rake,erb}",
         # so we hardcode this in for now. If this blocks a user, we can take that opportunity to read from `packwerk.yml`.
-        extension_is_targeted = ['.erb', '.rake', '.rb'].include?(path.extname)
+        extension_is_targeted = TARGETED_FILES_EXTENSIONS.include?(path.extname)
 
         # If a file has been modified via a rename, then `git.modified_files` will return an array that includes that file's *original* name.
         # Packwerk will ignore input files that do not exist, and when the PR only contains renamed Ruby files, that means packwerk check works
@@ -127,7 +131,7 @@ module DangerPackwerk
         else
           T.absurd(grouping_strategy)
         end
-      end.each do |_group, unique_packwerk_reference_offenses|
+      end.each_value do |unique_packwerk_reference_offenses|
         break if current_comment_count >= max_comments
 
         current_comment_count += 1

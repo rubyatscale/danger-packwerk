@@ -7,6 +7,61 @@ on:
   pull_request:
 
 jobs:
-  call-workflow-from-shared-config:
-    uses: rubyatscale/shared-config/.github/workflows/ci.yml@main
-    secrets: inherit
+  run_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby:
+          - 3.2
+          - 3.3
+          - 3.4
+    env:
+      BUNDLE_GEMFILE: Gemfile
+    name: "Run tests: Ruby ${{ matrix.ruby }}"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby ${{ matrix.ruby }}
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: ${{ matrix.ruby }}
+      - name: Run tests
+        run: bundle exec rspec
+  static_type_check:
+    name: "Type Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 3.3
+      - name: Run static type checks
+        run: bundle exec srb tc
+  run_linter:
+    runs-on: ubuntu-latest
+    name: "Linter"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 3.3
+      - name: Run linter
+        run: bundle exec rubocop
+  notify_on_failure:
+    runs-on: ubuntu-latest
+    needs: [run_tests, static_type_check, run_linter]
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+    steps:
+      - uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "${{ github.repository }}/${{ github.ref }}: FAILED\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }

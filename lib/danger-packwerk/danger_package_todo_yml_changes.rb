@@ -56,7 +56,7 @@ module DangerPackwerk
 
       current_comment_count = 0
 
-      violation_diff.added_violations.group_by(&:class_name).each do |_class_name, violations|
+      violation_diff.added_violations.group_by(&:class_name).each_value do |violations|
         break if current_comment_count >= max_comments
 
         location = T.must(violations.first).file_location
