@@ -6,6 +6,7 @@ RSpec.shared_context 'danger plugin' do
   let(:renamed_files) { [] }
   let(:pr_json) do
     {
+      head: { ref: 'my_branch' },
       base: {
         repo: {
           html_url: 'https://github.com/MyOrg/my_repo',

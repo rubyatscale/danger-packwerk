@@ -5,7 +5,7 @@
 require 'sorbet-runtime'
 
 module DangerPackwerk
-  PACKAGE_TODO_PATTERN = T.let(/.*?package_todo\.yml\z/.freeze, Regexp)
+  PACKAGE_TODO_PATTERN = T.let(/.*?package_todo\.yml\z/, Regexp)
   DEPENDENCY_VIOLATION_TYPE = 'dependency'
   PRIVACY_VIOLATION_TYPE = 'privacy'
 

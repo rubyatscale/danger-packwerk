@@ -21,10 +21,11 @@ module DangerPackwerk
         override.params(
           offenses: T::Array[Packwerk::ReferenceOffense],
           repo_link: String,
-          org_name: String
+          org_name: String,
+          repo_url_builder: T.nilable(T.proc.params(constant_path: String).returns(String))
         ).returns(String)
       end
-      def format_offenses(offenses, repo_link, org_name)
+      def format_offenses(offenses, repo_link, org_name, repo_url_builder: nil)
         reference_offense = T.must(offenses.first)
         violation_types = offenses.map(&:violation_type)
         referencing_file = reference_offense.reference.relative_path
@@ -45,11 +46,18 @@ module DangerPackwerk
         team_to_work_with = constant_source_package_ownership_info.owning_team ? constant_source_package_ownership_info.markdown_link_to_github_members_no_tag : 'the pack owner'
         privacy_violation_message = "- Does API in #{constant_source_package.name}/public support this use case?\n  - If not, can we work with #{team_to_work_with} to create and use a public API?\n  - If `#{constant_name}` should already be public, try `bin/packs make_public #{constant_location}`."
 
+        constant_location_url =
+          if repo_url_builder
+            repo_url_builder.call(constant_location)
+          else
+            "#{repo_link}/blob/main/#{constant_location}"
+          end
+
         if violation_types.include?(::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE) && violation_types.include?(::DangerPackwerk::PRIVACY_VIOLATION_TYPE)
           <<~MESSAGE
             **Packwerk Violation**
             - Type: Privacy :lock: + Dependency :knot:
-            - Constant: [<ins>`#{constant_name}`</ins>](#{repo_link}/blob/main/#{constant_location})
+            - Constant: [<ins>`#{constant_name}`</ins>](#{constant_location_url})
             - Owning pack: #{constant_source_package_name}
               #{constant_source_package_ownership_info.ownership_copy}
 
@@ -69,7 +77,7 @@ module DangerPackwerk
           <<~MESSAGE
             **Packwerk Violation**
             - Type: Dependency :knot:
-            - Constant: [<ins>`#{constant_name}`</ins>](#{repo_link}/blob/main/#{constant_location})
+            - Constant: [<ins>`#{constant_name}`</ins>](#{constant_location_url})
             - Owning pack: #{constant_source_package_name}
               #{constant_source_package_ownership_info.ownership_copy}
 
@@ -88,7 +96,7 @@ module DangerPackwerk
           <<~MESSAGE
             **Packwerk Violation**
             - Type: Privacy :lock:
-            - Constant: [<ins>`#{constant_name}`</ins>](#{repo_link}/blob/main/#{constant_location})
+            - Constant: [<ins>`#{constant_name}`</ins>](#{constant_location_url})
             - Owning pack: #{constant_source_package_name}
               #{constant_source_package_ownership_info.ownership_copy}
 
