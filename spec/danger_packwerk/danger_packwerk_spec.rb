@@ -112,8 +112,50 @@ module DangerPackwerk
         context 'when the only files modified are ones that packwerk ignores' do
           let(:modified_files) { [write_file('frontend/javascript/some_file.js').to_s] }
 
-          it 'leaves an inline comment helping the user figure out what to do next' do
+          it 'leaves no comments' do
             expect_any_instance_of(Packwerk::Cli).not_to receive(:execute_command)
+            packwerk_check
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 0
+          end
+        end
+
+        context 'when the only violations match enforcement_globs_ignore' do
+          let(:offenses) { [generic_privacy_violation] }
+
+          it 'leaves no comments' do
+            write_file('package.yml', <<~YML)
+              enforce_dependencies: true
+              enforce_privacy: true
+              enforcement_globs_ignore:
+                - enforcements:
+                  - privacy
+                  ignores:
+                  - packs/referencing_pack/some_file.rb
+                  reason: man this one is just too difficult to fix
+            YML
+
+            packwerk_check
+            expect(dangerfile.status_report[:warnings]).to be_empty
+            expect(dangerfile.status_report[:errors]).to be_empty
+            actual_markdowns = dangerfile.status_report[:markdowns]
+            expect(actual_markdowns.count).to eq 0
+          end
+
+          it 'leaves no comments when using glob patterns' do
+            write_file('package.yml', <<~YML)
+              enforce_dependencies: true
+              enforce_privacy: true
+              enforcement_globs_ignore:
+                - enforcements:
+                  - privacy
+                  ignores:
+                  - packs/referencing_pack/*.rb
+                  reason: man this one is just too difficult to fix
+            YML
+
             packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty

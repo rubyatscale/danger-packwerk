@@ -108,10 +108,14 @@ module DangerPackwerk
       packwerk_reference_offenses_to_care_about = packwerk_reference_offenses.reject do |packwerk_reference_offense|
         constant_name = packwerk_reference_offense.reference.constant.name
         filepath_that_defines_this_constant = Private.constant_resolver.resolve(constant_name)&.location
+        reference_path = packwerk_reference_offense.reference.relative_path
+
         # Ignore references that have been renamed
         renamed_files.include?(filepath_that_defines_this_constant) ||
           # Ignore violations that are not in the allow-list of violation types to leave comments for
-          !violation_types.include?(packwerk_reference_offense.violation_type)
+          !violation_types.include?(packwerk_reference_offense.violation_type) ||
+          # Ignore violations that match enforcement_globs_ignore
+          ignored_by_enforcement_globs(packwerk_reference_offense, reference_path)
       end
 
       # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation
@@ -149,6 +153,35 @@ module DangerPackwerk
         fail(failure_message) if fail_build
 
         on_failure.call(packwerk_reference_offenses)
+      end
+    end
+
+    sig do
+      params(
+        packwerk_reference_offense: Packwerk::ReferenceOffense,
+        reference_path: String
+      ).returns(T::Boolean)
+    end
+    def ignored_by_enforcement_globs(packwerk_reference_offense, reference_path)
+      # Get the package for this reference to check for enforcement_globs_ignore
+      package = ParsePackwerk.package_from_path(reference_path)
+      enforcement_globs_ignore = package.config['enforcement_globs_ignore']
+
+      # Check if this offense should be ignored based on enforcement_globs_ignore
+      if enforcement_globs_ignore.is_a?(Array)
+        enforcement_globs_ignore.any? do |glob_config|
+          next false unless glob_config.is_a?(Hash)
+
+          enforcements = glob_config['enforcements']
+          ignores = glob_config['ignores']
+
+          # Check if this violation type is in the enforcements list
+          # and if the file path matches any of the ignores glob patterns
+          enforcements&.include?(packwerk_reference_offense.violation_type) &&
+            ignores&.any? { |ignore_pattern| File.fnmatch(ignore_pattern, reference_path) }
+        end
+      else
+        false
       end
     end
   end
