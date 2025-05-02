@@ -5,7 +5,8 @@ module DangerPackwerk
     describe '#check' do
       let(:load_paths) do
         {
-          'packs/some_pack' => 'Object'
+          'packs/some_pack' => 'Object',
+          'packs/referencing_pack' => 'Object'
         }
       end
       let(:root_path) { nil }
@@ -13,9 +14,10 @@ module DangerPackwerk
       before do
         # These paths need to exist for ConstantResolver
         [
-          'packs/some_pack/some_class.rb',
+          'packs/referencing_pack/some_file.rb',
+          'packs/some_pack/private_constant.rb',
           'packs/some_pack/some_other_class.rb',
-          'packs/some_pack/some_file.rb',
+          'packs/some_pack/my_file.rb',
           'packs/some_pack/some_class_with_new_name.rb',
           'packs/some_pack/some_class_with_old_name.rb'
         ].each { |path| write_file(path) }
@@ -25,13 +27,16 @@ module DangerPackwerk
 
       context 'using inputted formatter' do
         let(:packwerk) { dangerfile.packwerk }
+        let(:depended_on_constant) do
+          sorbet_double(Packwerk::ConstantContext, location: 'packs/referencing_pack/some_file.rb', package: double(name: 'packs/referencing_pack'), name: '::SomeFile')
+        end
         let(:constant) do
-          sorbet_double(Packwerk::ConstantContext, location: 'some/location.rb', package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
+          sorbet_double(Packwerk::ConstantContext, location: 'packs/some_pack/private_constant.rb', package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
         end
         let(:generic_dependency_violation) do
           sorbet_double(
             Packwerk::ReferenceOffense,
-            reference: reference,
+            reference: depended_on_reference,
             violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
             message: 'Vanilla message about dependency violations',
             location: Packwerk::Node::Location.new(12, 5)
@@ -44,6 +49,13 @@ module DangerPackwerk
             violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
             message: 'Vanilla message about privacy violations',
             location: Packwerk::Node::Location.new(12, 5)
+          )
+        end
+        let(:depended_on_reference) do
+          sorbet_double(
+            Packwerk::Reference,
+            relative_path: 'packs/some_pack/my_file.rb',
+            constant: depended_on_constant
           )
         end
         let(:reference) do
@@ -120,7 +132,9 @@ module DangerPackwerk
             actual_markdowns = dangerfile.status_report[:markdowns]
             expect(actual_markdowns.count).to eq 1
             actual_markdown = actual_markdowns.first
-            expect(actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+            expect(actual_markdown.message).to eq(<<~MSG.chomp)
+              Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+            MSG
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
             expect(actual_markdown.type).to eq :markdown
@@ -139,7 +153,9 @@ module DangerPackwerk
               actual_markdowns = dangerfile.status_report[:markdowns]
               expect(actual_markdowns.count).to eq 1
               actual_markdown = actual_markdowns.first
-              expect(actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+              expect(actual_markdown.message).to eq(<<~MSG.chomp)
+                Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+              MSG
               expect(actual_markdown.line).to eq 12
               expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
               expect(actual_markdown.type).to eq :markdown
@@ -157,9 +173,11 @@ module DangerPackwerk
             actual_markdowns = dangerfile.status_report[:markdowns]
             expect(actual_markdowns.count).to eq 1
             actual_markdown = actual_markdowns.first
-            expect(actual_markdown.message).to eq 'Vanilla message about dependency violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+            expect(actual_markdown.message).to eq(<<~MSG.chomp)
+              Vanilla message about dependency violations [::SomeFile](https://github.com/MyOrg/my_repo/blob/my_branch/packs/referencing_pack/some_file.rb)
+            MSG
             expect(actual_markdown.line).to eq 12
-            expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
+            expect(actual_markdown.file).to eq 'packs/some_pack/my_file.rb'
             expect(actual_markdown.type).to eq :markdown
           end
         end
@@ -172,9 +190,20 @@ module DangerPackwerk
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 1
-            actual_markdown = actual_markdowns.first
-            expect(actual_markdown.message).to eq "Vanilla message about dependency violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)\n\nVanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)"
+            expect(actual_markdowns.count).to eq 2
+
+            actual_markdown = actual_markdowns[0]
+            expect(actual_markdown.message).to eq(<<~MSG.chomp)
+              Vanilla message about dependency violations [::SomeFile](https://github.com/MyOrg/my_repo/blob/my_branch/packs/referencing_pack/some_file.rb)
+            MSG
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq 'packs/some_pack/my_file.rb'
+            expect(actual_markdown.type).to eq :markdown
+
+            actual_markdown = actual_markdowns[1]
+            expect(actual_markdown.message).to eq(<<~MSG.chomp)
+              Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+            MSG
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
             expect(actual_markdown.type).to eq :markdown
@@ -194,9 +223,20 @@ module DangerPackwerk
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 1
-            actual_markdown = actual_markdowns.first
-            expect(actual_markdown.message).to eq "Vanilla message about dependency violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)\n\nVanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)"
+            expect(actual_markdowns.count).to eq 2
+
+            actual_markdown = actual_markdowns[0]
+            expect(actual_markdown.message).to eq(<<~MSG.chomp)
+              Vanilla message about dependency violations [::SomeFile](https://github.com/MyOrg/my_repo/blob/my_branch/packs/referencing_pack/some_file.rb)
+            MSG
+            expect(actual_markdown.line).to eq 12
+            expect(actual_markdown.file).to eq "#{root_path}packs/some_pack/my_file.rb"
+            expect(actual_markdown.type).to eq :markdown
+
+            actual_markdown = actual_markdowns[1]
+            expect(actual_markdown.message).to eq(<<~MSG.chomp)
+              Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+            MSG
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq "#{root_path}packs/referencing_pack/some_file.rb"
             expect(actual_markdown.type).to eq :markdown
@@ -220,7 +260,9 @@ module DangerPackwerk
               actual_markdowns = dangerfile.status_report[:markdowns]
               expect(actual_markdowns.count).to eq 1
               actual_markdown = actual_markdowns.first
-              expect(actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+              expect(actual_markdown.message).to eq(<<~MSG.chomp)
+                Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+              MSG
               expect(actual_markdown.line).to eq 12
               expect(actual_markdown.file).to eq "#{root_path}packs/referencing_pack/some_file.rb"
               expect(actual_markdown.type).to eq :markdown
@@ -265,7 +307,11 @@ module DangerPackwerk
                 actual_markdowns = dangerfile.status_report[:markdowns]
                 expect(actual_markdowns.count).to eq 1
                 actual_markdown = actual_markdowns.first
-                expect(actual_markdown.message).to eq "Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)\n\nVanilla message about dependency violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)"
+                expect(actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+
+                  Vanilla message about dependency violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(actual_markdown.line).to eq 12
                 expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(actual_markdown.type).to eq :markdown
@@ -309,13 +355,17 @@ module DangerPackwerk
                 expect(actual_markdowns.count).to eq 2
 
                 first_actual_markdown = actual_markdowns.first
-                expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(first_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(first_actual_markdown.line).to eq 12
                 expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(first_actual_markdown.type).to eq :markdown
 
                 second_actual_markdown = actual_markdowns.last
-                expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(second_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(second_actual_markdown.line).to eq 22
                 expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(second_actual_markdown.type).to eq :markdown
@@ -359,13 +409,17 @@ module DangerPackwerk
                 expect(actual_markdowns.count).to eq 2
 
                 first_actual_markdown = actual_markdowns.first
-                expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(first_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(first_actual_markdown.line).to eq 12
                 expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(first_actual_markdown.type).to eq :markdown
 
                 second_actual_markdown = actual_markdowns.last
-                expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(second_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(second_actual_markdown.line).to eq 12
                 expect(second_actual_markdown.file).to eq 'packs/referencing_pack/some_other_file.rb'
                 expect(second_actual_markdown.type).to eq :markdown
@@ -409,13 +463,17 @@ module DangerPackwerk
                 expect(actual_markdowns.count).to eq 2
 
                 first_actual_markdown = actual_markdowns.first
-                expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(first_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(first_actual_markdown.line).to eq 12
                 expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(first_actual_markdown.type).to eq :markdown
 
                 second_actual_markdown = actual_markdowns.last
-                expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(second_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(second_actual_markdown.line).to eq 12
                 expect(second_actual_markdown.file).to eq 'packs/another_referencing_pack/some_file.rb'
                 expect(second_actual_markdown.type).to eq :markdown
@@ -466,7 +524,11 @@ module DangerPackwerk
                 actual_markdowns = dangerfile.status_report[:markdowns]
                 expect(actual_markdowns.count).to eq 1
                 actual_markdown = actual_markdowns.first
-                expect(actual_markdown.message).to eq "Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)\n\nVanilla message about dependency violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)"
+                expect(actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+
+                  Vanilla message about dependency violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(actual_markdown.line).to eq 12
                 expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(actual_markdown.type).to eq :markdown
@@ -508,7 +570,11 @@ module DangerPackwerk
                 actual_markdowns = dangerfile.status_report[:markdowns]
                 expect(actual_markdowns.count).to eq 1
                 actual_markdown = actual_markdowns.first
-                expect(actual_markdown.message).to eq "Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)\n\nVanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)"
+                expect(actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(actual_markdown.line).to eq 12
                 expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(actual_markdown.type).to eq :markdown
@@ -550,7 +616,11 @@ module DangerPackwerk
                 actual_markdowns = dangerfile.status_report[:markdowns]
                 expect(actual_markdowns.count).to eq 1
                 actual_markdown = actual_markdowns.first
-                expect(actual_markdown.message).to eq "Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)\n\nVanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)"
+                expect(actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(actual_markdown.line).to eq 12
                 expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(actual_markdown.type).to eq :markdown
@@ -605,13 +675,17 @@ module DangerPackwerk
                 expect(actual_markdowns.count).to eq 2
 
                 first_actual_markdown = actual_markdowns.first
-                expect(first_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(first_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(first_actual_markdown.line).to eq 12
                 expect(first_actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
                 expect(first_actual_markdown.type).to eq :markdown
 
                 second_actual_markdown = actual_markdowns.last
-                expect(second_actual_markdown.message).to eq 'Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+                expect(second_actual_markdown.message).to eq(<<~MSG.chomp)
+                  Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                MSG
                 expect(second_actual_markdown.line).to eq 12
                 expect(second_actual_markdown.file).to eq 'packs/another_referencing_pack/some_file.rb'
                 expect(second_actual_markdown.type).to eq :markdown
@@ -718,7 +792,7 @@ module DangerPackwerk
             ]
           end
 
-          let(:constant) do
+          let(:depended_on_constant) do
             sorbet_double(Packwerk::ConstantContext, name: 'SomeClassWithNewName')
           end
 
@@ -759,7 +833,7 @@ module DangerPackwerk
               actual_markdowns = dangerfile.status_report[:markdowns]
               expect(actual_markdowns.count).to eq 1
               actual_markdown = actual_markdowns.first
-              expect(actual_markdown.message).to eq 'Some unknown message [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/some/location.rb)'
+              expect(actual_markdown.message).to eq 'Some unknown message [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)'
               expect(actual_markdown.line).to eq 12
               expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
               expect(actual_markdown.type).to eq :markdown
