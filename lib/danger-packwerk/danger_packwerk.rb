@@ -108,14 +108,13 @@ module DangerPackwerk
       packwerk_reference_offenses_to_care_about = packwerk_reference_offenses.reject do |packwerk_reference_offense|
         constant_name = packwerk_reference_offense.reference.constant.name
         filepath_that_defines_this_constant = Private.constant_resolver.resolve(constant_name)&.location
-        reference_path = packwerk_reference_offense.reference.relative_path
 
         # Ignore references that have been renamed
         renamed_files.include?(filepath_that_defines_this_constant) ||
           # Ignore violations that are not in the allow-list of violation types to leave comments for
           !violation_types.include?(packwerk_reference_offense.violation_type) ||
           # Ignore violations that match enforcement_globs_ignore
-          ignored_by_enforcement_globs(packwerk_reference_offense, reference_path)
+          enforcement_ignored?(packwerk_reference_offense)
       end
 
       # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation
@@ -158,30 +157,41 @@ module DangerPackwerk
 
     sig do
       params(
-        packwerk_reference_offense: Packwerk::ReferenceOffense,
-        reference_path: String
+        packwerk_reference_offense: Packwerk::ReferenceOffense
       ).returns(T::Boolean)
     end
-    def ignored_by_enforcement_globs(packwerk_reference_offense, reference_path)
-      # Get the package for this reference to check for enforcement_globs_ignore
+    def enforcement_ignored?(packwerk_reference_offense)
+      # For privacy violations, check the referencing package
+      # For dependency violations, check the referenced package (target)
+      if packwerk_reference_offense.violation_type == PRIVACY_VIOLATION_TYPE
+        # For privacy violation, we are saying "this is my constant, you
+        # should not reference it, but I'll make an exception in this case"
+        reference_path = packwerk_reference_offense.reference.relative_path
+      else
+        # For dependency violation, we are saying "I want to reference this constant,
+        # but I don't want to declare it. I'll make an exception in this case"
+        constant_name = packwerk_reference_offense.reference.constant.name
+        reference_path = Private.constant_resolver.resolve(constant_name)&.location
+      end
+      return false if reference_path.nil?
+
+      enforcement_ignored_for_path_and_type?(reference_path, packwerk_reference_offense.violation_type)
+    end
+
+    sig { params(reference_path: String, violation_type: String).returns(T::Boolean) }
+    def enforcement_ignored_for_path_and_type?(reference_path, violation_type)
       package = ParsePackwerk.package_from_path(reference_path)
       enforcement_globs_ignore = package.config['enforcement_globs_ignore']
 
+      return false unless enforcement_globs_ignore.is_a?(Array)
+
       # Check if this offense should be ignored based on enforcement_globs_ignore
-      if enforcement_globs_ignore.is_a?(Array)
-        enforcement_globs_ignore.any? do |glob_config|
-          next false unless glob_config.is_a?(Hash)
+      enforcement_globs_ignore.any? do |glob_config|
+        next false unless glob_config.is_a?(Hash)
+        next false unless glob_config['enforcements']&.include?(violation_type)
 
-          enforcements = glob_config['enforcements']
-          ignores = glob_config['ignores']
-
-          # Check if this violation type is in the enforcements list
-          # and if the file path matches any of the ignores glob patterns
-          enforcements&.include?(packwerk_reference_offense.violation_type) &&
-            ignores&.any? { |ignore_pattern| File.fnmatch(ignore_pattern, reference_path) }
-        end
-      else
-        false
+        # Check if the file path matches any of the ignores glob patterns
+        glob_config['ignores']&.any? { |ignore_pattern| File.fnmatch(ignore_pattern, reference_path) }
       end
     end
   end
