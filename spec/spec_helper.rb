@@ -69,8 +69,6 @@ def sorbet_double(stubbed_class, attr_map = {})
   end
 end
 
-def write_package_yml(
-  pack_name
-)
+def write_package_yml(pack_name)
   write_pack(pack_name, { 'enforce_dependencies' => true, 'enforce_privacy' => true })
 end

@@ -89,6 +89,7 @@ module DangerPackwerk
         let(:modified_files) { [write_file('packs/referencing_pack/some_file.rb').to_s] }
 
         before do
+          # This is the root package.yml file
           write_file('package.yml', <<~YML)
             enforce_dependencies: true
             enforce_privacy: true
@@ -122,11 +123,11 @@ module DangerPackwerk
           end
         end
 
-        context 'when the only violations match enforcement_globs_ignore' do
+        context 'when the privacy violation matches enforcement_globs_ignore' do
           let(:offenses) { [generic_privacy_violation] }
 
-          it 'leaves no comments' do
-            write_file('package.yml', <<~YML)
+          it 'does not report when ignoring privacy violations with a path' do
+            write_file('packs/some_pack/package.yml', <<~YML)
               enforce_dependencies: true
               enforce_privacy: true
               enforcement_globs_ignore:
@@ -141,11 +142,11 @@ module DangerPackwerk
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 0
+            expect(actual_markdowns.first&.message).to be_nil
           end
 
-          it 'leaves no comments when using glob patterns' do
-            write_file('package.yml', <<~YML)
+          it 'does not report when ignoring privacy violations with a glob' do
+            write_file('packs/some_pack/package.yml', <<~YML)
               enforce_dependencies: true
               enforce_privacy: true
               enforcement_globs_ignore:
@@ -153,14 +154,14 @@ module DangerPackwerk
                   - privacy
                   ignores:
                   - packs/referencing_pack/*.rb
-                  reason: man this one is just too difficult to fix
+                  reason: All of these are impossible
             YML
 
             packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
             actual_markdowns = dangerfile.status_report[:markdowns]
-            expect(actual_markdowns.count).to eq 0
+            expect(actual_markdowns.first&.message).to be_nil
           end
         end
 
