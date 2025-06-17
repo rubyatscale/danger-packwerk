@@ -84,6 +84,18 @@ packwerk.check(
 )
 ```
 
+### Supporting new violation types
+By default, only `dependency` and `privacy` violation types are supported. If you wish to use other violation types you'll need to provide them when calling `check`:
+```ruby
+packwerk.check(
+  violation_types: %w[dependency privacy layer]
+)
+```
+
+Any violations not included in this list will be ignored.
+
+You will also most likely want to customize the offenses formatter and provide specific feedback for the new violation types.
+
 ## package_todo_yml_changes.check
 ![This is an image displaying an inline comment from the Danger github bot.](docs/update.png)
 
