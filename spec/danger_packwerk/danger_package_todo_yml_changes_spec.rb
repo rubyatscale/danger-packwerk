@@ -914,6 +914,74 @@ module DangerPackwerk
           subject
           expect(dangerfile).to produce_no_danger_messages
         end
+
+        it 'correctly normalizes file paths when comparing violations' do
+          expect(slack_notifier).to receive(:notify_slack).with(
+            { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 0 } },
+            ['packs/some_pack/package_todo.yml']
+          )
+          subject
+        end
+      end
+
+      context 'a package_todo.yml file has been modified with multiple files that have been renamed' do
+        let(:renamed_files) do
+          [
+            {
+              after: 'packs/some_pack/some_class_with_new_name.rb',
+              before: 'packs/some_pack/some_class_with_old_name.rb'
+            },
+            {
+              after: 'packs/some_pack/another_renamed_class.rb',
+              before: 'packs/some_pack/another_old_name.rb'
+            }
+          ]
+        end
+
+        let(:modified_files) do
+          [
+            write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
+              ---
+              packs/some_other_pack:
+                "OtherPackClass":
+                  violations:
+                  - privacy
+                  files:
+                  - packs/some_pack/some_class_with_new_name.rb
+                  - packs/some_pack/another_renamed_class.rb
+            YML
+          ]
+        end
+
+        let(:some_pack_package_todo_before) do
+          write_file('packs/some_pack/package_todo.yml', <<~YML.strip)
+            ---
+            packs/some_other_pack:
+              "OtherPackClass":
+                violations:
+                - privacy
+                files:
+                - packs/some_pack/some_class_with_old_name.rb
+                - packs/some_pack/another_old_name.rb
+          YML
+        end
+
+        before do
+          ['packs/some_pack/another_renamed_class.rb', 'packs/some_pack/another_old_name.rb'].each { |path| write_file(path) }
+        end
+
+        it 'does not display a markdown message' do
+          subject
+          expect(dangerfile).to produce_no_danger_messages
+        end
+
+        it 'correctly normalizes all renamed file paths when comparing violations' do
+          expect(slack_notifier).to receive(:notify_slack).with(
+            { dependency: { minus: 0, plus: 0 }, privacy: { minus: 0, plus: 0 } },
+            ['packs/some_pack/package_todo.yml']
+          )
+          subject
+        end
       end
 
       context 'a package_todo.yml file has been modified with files that have been renamed AND been added' do

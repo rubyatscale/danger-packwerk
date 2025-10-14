@@ -33,6 +33,9 @@ module DangerPackwerk
         renamed_files_before = git_filesystem.renamed_files.map { |before_after_file| before_after_file[:before] }
         renamed_files_after = git_filesystem.renamed_files.map { |before_after_file| before_after_file[:after] }
 
+        # Build a rename mapping to normalize file paths when comparing violations
+        rename_mapping = build_rename_mapping(git_filesystem.renamed_files)
+
         git_filesystem.modified_files.grep(PACKAGE_TODO_PATTERN).each do |modified_package_todo_yml_file|
           # We skip over modified files if one of the modified files is a renamed `package_todo.yml` file.
           # This allows us to rename packs while ignoring "new violations" in those renamed packs.
@@ -40,8 +43,13 @@ module DangerPackwerk
 
           head_commit_violations = BasicReferenceOffense.from(modified_package_todo_yml_file)
           base_commit_violations = get_violations_before_patch_for(git_filesystem, modified_package_todo_yml_file)
-          added_violations += head_commit_violations - base_commit_violations
-          removed_violations += base_commit_violations - head_commit_violations
+
+          # Normalize violations for renames: update old file paths to new file paths
+          # so that violations referring to renamed files are properly matched
+          normalized_base_violations = normalize_violations_for_renames(base_commit_violations, rename_mapping)
+
+          added_violations += head_commit_violations - normalized_base_violations
+          removed_violations += normalized_base_violations - head_commit_violations
         end
 
         #
@@ -76,6 +84,42 @@ module DangerPackwerk
         end
 
         [relevant_added_violations, relevant_removed_violations]
+      end
+
+      sig do
+        params(
+          renamed_files: T::Array[{ after: String, before: String }]
+        ).returns(T::Hash[String, String])
+      end
+      def self.build_rename_mapping(renamed_files)
+        renamed_files.each_with_object({}) do |rename, mapping|
+          mapping[rename[:before]] = rename[:after]
+        end
+      end
+
+      sig do
+        params(
+          violations: T::Array[BasicReferenceOffense],
+          rename_mapping: T::Hash[String, String]
+        ).returns(T::Array[BasicReferenceOffense])
+      end
+      def self.normalize_violations_for_renames(violations, rename_mapping)
+        violations.map do |violation|
+          if rename_mapping.key?(violation.file)
+            # Create a new violation with the updated file path
+            new_file_path = T.must(rename_mapping[violation.file])
+            BasicReferenceOffense.new(
+              class_name: violation.class_name,
+              file: new_file_path,
+              to_package_name: violation.to_package_name,
+              from_package_name: violation.from_package_name,
+              type: violation.type,
+              file_location: violation.file_location
+            )
+          else
+            violation
+          end
+        end
       end
 
       sig do
