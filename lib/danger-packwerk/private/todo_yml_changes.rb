@@ -105,20 +105,18 @@ module DangerPackwerk
       end
       def self.normalize_violations_for_renames(violations, rename_mapping)
         violations.map do |violation|
-          if rename_mapping.key?(violation.file)
-            # Create a new violation with the updated file path
-            new_file_path = T.must(rename_mapping[violation.file])
-            BasicReferenceOffense.new(
-              class_name: violation.class_name,
-              file: new_file_path,
-              to_package_name: violation.to_package_name,
-              from_package_name: violation.from_package_name,
-              type: violation.type,
-              file_location: violation.file_location
-            )
-          else
-            violation
-          end
+          file = rename_mapping[violation.file]
+          next violation unless file
+
+          # Create a new violation with the updated file path
+          BasicReferenceOffense.new(
+            class_name: violation.class_name,
+            file: file,
+            to_package_name: violation.to_package_name,
+            from_package_name: violation.from_package_name,
+            type: violation.type,
+            file_location: violation.file_location
+          )
         end
       end
 
