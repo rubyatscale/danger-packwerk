@@ -30,14 +30,6 @@ module DangerPackwerk
       cli.execute_command(['check', *files])
       reference_offenses = formatter.aggregated_offenses.compact.select { |offense| offense.is_a?(Packwerk::ReferenceOffense) }
       T.cast(reference_offenses, T::Array[Packwerk::ReferenceOffense])
-    rescue SystemExit => e
-      # Packwerk should probably exit positively here rather than raising an error -- there should be no
-      # errors if the user has excluded all files being checked.
-      if e.message == 'No files found or given. Specify files or check the include and exclude glob in the config file.'
-        []
-      else
-        raise
-      end
     end
 
     #
