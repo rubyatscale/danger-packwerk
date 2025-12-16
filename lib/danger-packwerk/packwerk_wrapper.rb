@@ -1,5 +1,7 @@
 # typed: strict
 
+require 'stringio'
+
 module DangerPackwerk
   # This class wraps packwerk to give us precisely what we want, which is the `Packwerk::ReferenceOffense` from a set of files.
   # Note that statically packwerk returns `Packwerk::Offense` from running `bin/packwerk check`. The two types of `Packwerk::Offense` are
@@ -19,8 +21,7 @@ module DangerPackwerk
       formatter = OffensesAggregatorFormatter.new
       # This is mostly copied from exe/packwerk within the packwerk gem, but we use our own formatters
       ENV['RAILS_ENV'] = 'test'
-      style = Packwerk::OutputStyles::Coloured.new
-      cli = Packwerk::Cli.new(style: style, offenses_formatter: formatter)
+      cli = Packwerk::Cli.new(offenses_formatter: formatter, out: StringIO.new)
       cli.execute_command(['check', *files])
       reference_offenses = formatter.aggregated_offenses.compact.select { |offense| offense.is_a?(Packwerk::ReferenceOffense) }
       T.cast(reference_offenses, T::Array[Packwerk::ReferenceOffense])
