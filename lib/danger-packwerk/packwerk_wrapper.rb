@@ -1,5 +1,7 @@
 # typed: strict
 
+require 'stringio'
+
 module DangerPackwerk
   # This class wraps packwerk to give us precisely what we want, which is the `Packwerk::ReferenceOffense` from a set of files.
   # Note that statically packwerk returns `Packwerk::Offense` from running `bin/packwerk check`. The two types of `Packwerk::Offense` are
@@ -14,24 +16,20 @@ module DangerPackwerk
   class PackwerkWrapper
     extend T::Sig
 
+    # This code is partially copied from exe/packwerk within the packwerk gem. We're imitating the
+    # cli here but with our own offense formatter to collect the violating data directly.
+    #
+    # We capture and ignore the output of the Cli so that we don't leak it to the build system logs.
+    # When packwerk produces errors it can make the build system look like it's failing when really
+    # this is expected behavior.
     sig { params(files: T::Array[String]).returns(T::Array[Packwerk::ReferenceOffense]) }
     def self.get_offenses_for_files(files)
       formatter = OffensesAggregatorFormatter.new
-      # This is mostly copied from exe/packwerk within the packwerk gem, but we use our own formatters
       ENV['RAILS_ENV'] = 'test'
-      style = Packwerk::OutputStyles::Coloured.new
-      cli = Packwerk::Cli.new(style: style, offenses_formatter: formatter)
+      cli = Packwerk::Cli.new(offenses_formatter: formatter, out: StringIO.new)
       cli.execute_command(['check', *files])
       reference_offenses = formatter.aggregated_offenses.compact.select { |offense| offense.is_a?(Packwerk::ReferenceOffense) }
       T.cast(reference_offenses, T::Array[Packwerk::ReferenceOffense])
-    rescue SystemExit => e
-      # Packwerk should probably exit positively here rather than raising an error -- there should be no
-      # errors if the user has excluded all files being checked.
-      if e.message == 'No files found or given. Specify files or check the include and exclude glob in the config file.'
-        []
-      else
-        raise
-      end
     end
 
     #

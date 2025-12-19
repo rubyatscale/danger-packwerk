@@ -25,6 +25,7 @@ PATH
       packwerk
       parse_packwerk
       sorbet-runtime
+      stringio
 
 GEM
   remote: https://rubygems.org/

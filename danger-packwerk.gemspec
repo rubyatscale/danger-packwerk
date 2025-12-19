@@ -35,4 +35,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'packwerk'
   spec.add_dependency 'parse_packwerk'
   spec.add_dependency 'sorbet-runtime'
+  spec.add_dependency 'stringio'
 end
