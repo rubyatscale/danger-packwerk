@@ -93,12 +93,11 @@ module DangerPackwerk
             enforce_dependencies: true
             enforce_privacy: true
           YML
-          allow_any_instance_of(Packwerk::Cli).to receive(:execute_command).with(['check', *files_for_packwerk])
-          allow_any_instance_of(PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
+          allow(PksWrapper).to receive(:get_offenses_for_files).and_return(offenses)
         end
 
-        context 'when there are syntax errors in analyzed files' do
-          let(:offenses) { [sorbet_double(Packwerk::Parsers::ParseResult)] }
+        context 'when pks returns no violations (e.g., syntax errors in files)' do
+          let(:offenses) { [] }
 
           it 'exits gracefully' do
             packwerk_check
@@ -113,7 +112,7 @@ module DangerPackwerk
           let(:modified_files) { [write_file('frontend/javascript/some_file.js').to_s] }
 
           it 'leaves an inline comment helping the user figure out what to do next' do
-            expect_any_instance_of(Packwerk::Cli).not_to receive(:execute_command)
+            expect(PksWrapper).not_to receive(:get_offenses_for_files)
             packwerk_check
             expect(dangerfile.status_report[:warnings]).to be_empty
             expect(dangerfile.status_report[:errors]).to be_empty
@@ -865,8 +864,7 @@ module DangerPackwerk
             end
           end
 
-          allow_any_instance_of(Packwerk::Cli).to receive(:execute_command)
-          allow_any_instance_of(::DangerPackwerk::PackwerkWrapper::OffensesAggregatorFormatter).to receive(:aggregated_offenses).and_return(offenses)
+          allow(PksWrapper).to receive(:get_offenses_for_files).and_return(offenses)
 
           write_file('config/teams/product_infrastructure.yml', <<~YML)
             name: Product Infrastructure Backend

@@ -6,6 +6,8 @@ require 'packwerk'
 require 'parse_packwerk'
 require 'sorbet-runtime'
 require 'danger-packwerk/packwerk_wrapper'
+require 'danger-packwerk/pks_wrapper'
+require 'danger-packwerk/pks_offense'
 require 'danger-packwerk/private/git'
 
 module DangerPackwerk
@@ -18,7 +20,8 @@ module DangerPackwerk
     # especially given all violations should fail the build anyways.
     # We set a max (rather than unlimited) to avoid GitHub rate limiting and general spam if a PR does some sort of mass rename.
     DEFAULT_MAX_COMMENTS = 15
-    OnFailure = T.type_alias { T.proc.params(offenses: T::Array[Packwerk::ReferenceOffense]).void }
+    # Support both legacy Packwerk::ReferenceOffense and new PksOffense types
+    OnFailure = T.type_alias { T.proc.params(offenses: T::Array[T.any(Packwerk::ReferenceOffense, PksOffense)]).void }
     DEFAULT_ON_FAILURE = T.let(->(offenses) {}, OnFailure)
     DEFAULT_FAIL = false
     DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
@@ -101,54 +104,55 @@ module DangerPackwerk
 
       current_comment_count = 0
 
-      packwerk_reference_offenses = PackwerkWrapper.get_offenses_for_files(targeted_files.to_a).compact
+      pks_offenses = PksWrapper.get_offenses_for_files(targeted_files.to_a)
 
       renamed_files = git_filesystem.renamed_files.map { |before_after_file| before_after_file[:after] }
 
-      packwerk_reference_offenses_to_care_about = packwerk_reference_offenses.reject do |packwerk_reference_offense|
-        constant_name = packwerk_reference_offense.reference.constant.name
+      offenses_to_care_about = pks_offenses.reject do |offense|
+        constant_name = offense.reference.constant.name
         filepath_that_defines_this_constant = Private.constant_resolver.resolve(constant_name)&.location
         # Ignore references that have been renamed
         renamed_files.include?(filepath_that_defines_this_constant) ||
           # Ignore violations that are not in the allow-list of violation types to leave comments for
-          !violation_types.include?(packwerk_reference_offense.violation_type)
+          !violation_types.include?(offense.violation_type)
       end
 
       # We group by the constant name, line number, and reference path. Any offenses with these same values should only differ on what type of violation
       # they are (privacy or dependency). We put privacy and dependency violation messages in the same comment since they would occur on the same line.
-      packwerk_reference_offenses_to_care_about.group_by do |packwerk_reference_offense|
+      offenses_to_care_about.group_by do |offense|
         case grouping_strategy
         when CommentGroupingStrategy::PerConstantPerLocation
           [
-            packwerk_reference_offense.reference.constant.name,
-            packwerk_reference_offense.location&.line,
-            packwerk_reference_offense.reference.relative_path
+            offense.reference.constant.name,
+            offense.location.line,
+            offense.reference.relative_path
           ]
         when CommentGroupingStrategy::PerConstantPerPack
           [
-            packwerk_reference_offense.reference.constant.name,
-            ParsePackwerk.package_from_path(packwerk_reference_offense.reference.relative_path)
+            offense.reference.constant.name,
+            ParsePackwerk.package_from_path(offense.reference.relative_path)
           ]
         else
           T.absurd(grouping_strategy)
         end
-      end.each_value do |unique_packwerk_reference_offenses|
+      end.each_value do |unique_offenses|
         break if current_comment_count >= max_comments
 
         current_comment_count += 1
 
-        reference_offense = T.must(unique_packwerk_reference_offenses.first)
-        line_number = reference_offense.location&.line
-        referencing_file = reference_offense.reference.relative_path
+        offense = T.must(unique_offenses.first)
+        line_number = offense.location.line
+        referencing_file = offense.reference.relative_path
 
-        message = offenses_formatter.format_offenses(unique_packwerk_reference_offenses, repo_link, org_name, repo_url_builder: repo_url_builder)
+        # PksOffense adapters provide Packwerk::ReferenceOffense-compatible interface
+        message = offenses_formatter.format_offenses(T.unsafe(unique_offenses), repo_link, org_name, repo_url_builder: repo_url_builder)
         markdown(message, file: git_filesystem.convert_to_filesystem(referencing_file), line: line_number)
       end
 
       if current_comment_count > 0
         fail(failure_message) if fail_build
 
-        on_failure.call(packwerk_reference_offenses)
+        on_failure.call(pks_offenses)
       end
     end
   end
