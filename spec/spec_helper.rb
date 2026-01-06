@@ -6,6 +6,10 @@ require 'json'
 require 'packs'
 require 'packs/rspec/support'
 
+# Packwerk types are still available as test doubles via the packs transitive dependency.
+# The production code no longer directly depends on packwerk, but tests can use it for mocking.
+require 'packwerk'
+
 module DangerHelpers
   # These functions are a subset of https://github.com/danger/danger/blob/master/spec/spec_helper.rb
   # If you are expanding these files, see if it's already been done ^.
@@ -59,7 +63,7 @@ RSpec.configure do |config|
 
   config.before do |_example|
     ParsePackwerk.bust_cache!
-    allow(Packwerk::RailsLoadPaths).to receive(:extract_relevant_paths).and_return({})
+    DangerPackwerk.send(:const_get, :Private).instance_variable_set(:@constant_resolver, nil)
   end
 end
 

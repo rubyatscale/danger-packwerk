@@ -1,28 +1,11 @@
-GIT
-  remote: https://github.com/Shopify/packwerk.git
-  revision: b03d5bb30ab246490e79beea62d34d589f5993fc
-  branch: main
-  specs:
-    packwerk (3.2.2)
-      activesupport (>= 6.0)
-      ast
-      better_html
-      bundler
-      constant_resolver (>= 0.2.0)
-      parallel
-      parser
-      prism (>= 0.25.0)
-      sorbet-runtime (>= 0.5.9914)
-      zeitwerk (>= 2.6.1)
-
 PATH
   remote: .
   specs:
     danger-packwerk (0.15.0)
       code_ownership
+      constant_resolver
       danger-plugin-api (~> 1.0)
       packs
-      packwerk
       parse_packwerk
       sorbet-runtime
       stringio
@@ -179,6 +162,17 @@ GEM
       tty-prompt
     packs-specification (0.0.10)
       sorbet-runtime
+    packwerk (3.2.2)
+      activesupport (>= 6.0)
+      ast
+      better_html
+      bundler
+      constant_resolver (>= 0.2.0)
+      parallel
+      parser
+      prism (>= 0.25.0)
+      sorbet-runtime (>= 0.5.9914)
+      zeitwerk (>= 2.6.1)
     parallel (1.26.3)
     parse_packwerk (0.26.0)
       bigdecimal
@@ -343,7 +337,6 @@ PLATFORMS
 
 DEPENDENCIES
   danger-packwerk!
-  packwerk!
   pry
   railties
   rake

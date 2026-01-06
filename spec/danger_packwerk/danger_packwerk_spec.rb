@@ -3,12 +3,6 @@ require 'spec_helper'
 module DangerPackwerk
   RSpec.describe DangerPackwerk do
     describe '#check' do
-      let(:load_paths) do
-        {
-          'packs/some_pack' => 'Object',
-          'packs/referencing_pack' => 'Object'
-        }
-      end
       let(:root_path) { nil }
 
       before do
@@ -21,42 +15,60 @@ module DangerPackwerk
           'packs/some_pack/some_class_with_new_name.rb',
           'packs/some_pack/some_class_with_old_name.rb'
         ].each { |path| write_file(path) }
-        allow(Packwerk::RailsLoadPaths).to receive(:for).and_return(load_paths)
         write_package_yml('packs/some_pack')
+        write_package_yml('packs/referencing_pack')
+      end
+
+      # Helper to create PksOffense objects for tests
+      def build_pks_offense(
+        violation_type:,
+        file:,
+        constant_name:,
+        referencing_pack_name:,
+        defining_pack_name:,
+        line: 12,
+        column: 5,
+        strict: false,
+        message: ''
+      )
+        PksOffense.new(
+          violation_type: violation_type,
+          file: file,
+          line: line,
+          column: column,
+          constant_name: constant_name,
+          referencing_pack_name: referencing_pack_name,
+          defining_pack_name: defining_pack_name,
+          strict: strict,
+          message: message
+        )
       end
 
       context 'using inputted formatter' do
         let(:packwerk) { dangerfile.packwerk }
-        let(:depended_on_constant) do
-          sorbet_double(Packwerk::ConstantContext, location: 'packs/referencing_pack/some_file.rb', package: double(name: 'packs/referencing_pack'), name: '::SomeFile')
-        end
-        let(:constant) do
-          sorbet_double(Packwerk::ConstantContext, location: 'packs/some_pack/private_constant.rb', package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
-        end
         let(:generic_dependency_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
-            reference: depended_on_reference,
+          build_pks_offense(
             violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
-            message: 'Vanilla message about dependency violations',
-            location: Packwerk::Node::Location.new(12, 5)
+            file: 'packs/some_pack/my_file.rb',
+            constant_name: '::SomeFile',
+            referencing_pack_name: 'packs/some_pack',
+            defining_pack_name: 'packs/referencing_pack',
+            message: 'Vanilla message about dependency violations'
           )
         end
         let(:generic_privacy_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
-            reference: reference,
+          build_pks_offense(
             violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
-            message: 'Vanilla message about privacy violations',
-            location: Packwerk::Node::Location.new(12, 5)
+            file: 'packs/referencing_pack/some_file.rb',
+            constant_name: '::PrivateConstant',
+            referencing_pack_name: 'packs/referencing_pack',
+            defining_pack_name: 'packs/some_pack',
+            message: 'Vanilla message about privacy violations'
           )
         end
-        let(:depended_on_reference) do
-          sorbet_double(
-            Packwerk::Reference,
-            relative_path: 'packs/some_pack/my_file.rb',
-            constant: depended_on_constant
-          )
+        # These Packwerk test doubles are used by some grouping tests
+        let(:constant) do
+          sorbet_double(Packwerk::ConstantContext, location: 'packs/some_pack/private_constant.rb', package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
         end
         let(:reference) do
           sorbet_double(
@@ -791,11 +803,19 @@ module DangerPackwerk
             ]
           end
 
-          let(:depended_on_constant) do
-            sorbet_double(Packwerk::ConstantContext, name: 'SomeClassWithNewName')
+          # Use a violation referencing the renamed file's constant
+          let(:renamed_file_violation) do
+            build_pks_offense(
+              violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
+              file: 'packs/referencing_pack/some_file.rb',
+              constant_name: '::SomeClassWithNewName',
+              referencing_pack_name: 'packs/referencing_pack',
+              defining_pack_name: 'packs/some_pack',
+              message: 'Violation on renamed file'
+            )
           end
 
-          let(:offenses) { [generic_dependency_violation] }
+          let(:offenses) { [renamed_file_violation] }
 
           it 'does not leave an inline comment' do
             packwerk_check

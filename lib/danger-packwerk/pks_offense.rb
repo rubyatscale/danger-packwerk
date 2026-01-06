@@ -50,16 +50,31 @@ module DangerPackwerk
     # Adapter for Packwerk::ReferenceOffense.reference
     sig { returns(ReferenceAdapter) }
     def reference
-      package_adapter = PackageAdapter.new(name: defining_pack_name)
-      constant_adapter = ConstantAdapter.new(
-        name: constant_name,
-        location: file, # Best approximation - pks doesn't provide constant definition location
-        package: package_adapter
+      @reference ||= T.let(
+        begin
+          package_adapter = PackageAdapter.new(name: defining_pack_name)
+          # Try to resolve the constant's definition location using constant_resolver
+          # This is needed for formatters that link to the constant definition
+          constant_location = resolve_constant_location || file
+          constant_adapter = ConstantAdapter.new(
+            name: constant_name,
+            location: constant_location,
+            package: package_adapter
+          )
+          ReferenceAdapter.new(
+            relative_path: file,
+            constant: constant_adapter
+          )
+        end,
+        T.nilable(ReferenceAdapter)
       )
-      ReferenceAdapter.new(
-        relative_path: file,
-        constant: constant_adapter
-      )
+    end
+
+    sig { returns(T.nilable(String)) }
+    def resolve_constant_location
+      Private.constant_resolver.resolve(constant_name)&.location
+    rescue StandardError
+      nil
     end
 
     # Adapter for Packwerk::ReferenceOffense.location

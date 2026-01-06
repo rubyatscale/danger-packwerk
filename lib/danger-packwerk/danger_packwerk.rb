@@ -2,10 +2,8 @@
 # frozen_string_literal: true
 
 require 'danger'
-require 'packwerk'
 require 'parse_packwerk'
 require 'sorbet-runtime'
-require 'danger-packwerk/packwerk_wrapper'
 require 'danger-packwerk/pks_wrapper'
 require 'danger-packwerk/pks_offense'
 require 'danger-packwerk/private/git'
@@ -20,8 +18,7 @@ module DangerPackwerk
     # especially given all violations should fail the build anyways.
     # We set a max (rather than unlimited) to avoid GitHub rate limiting and general spam if a PR does some sort of mass rename.
     DEFAULT_MAX_COMMENTS = 15
-    # Support both legacy Packwerk::ReferenceOffense and new PksOffense types
-    OnFailure = T.type_alias { T.proc.params(offenses: T::Array[T.any(Packwerk::ReferenceOffense, PksOffense)]).void }
+    OnFailure = T.type_alias { T.proc.params(offenses: T::Array[PksOffense]).void }
     DEFAULT_ON_FAILURE = T.let(->(offenses) {}, OnFailure)
     DEFAULT_FAIL = false
     DEFAULT_FAILURE_MESSAGE = 'Packwerk violations were detected! Please resolve them to unblock the build.'
@@ -110,7 +107,14 @@ module DangerPackwerk
 
       offenses_to_care_about = pks_offenses.reject do |offense|
         constant_name = offense.reference.constant.name
-        filepath_that_defines_this_constant = Private.constant_resolver.resolve(constant_name)&.location
+        # Try to resolve where the constant is defined, but handle errors gracefully
+        # (e.g., ambiguous constants, missing files). If resolution fails, we're conservative
+        # and don't filter out the offense based on renamed files.
+        filepath_that_defines_this_constant = begin
+          Private.constant_resolver.resolve(constant_name)&.location
+        rescue StandardError
+          nil
+        end
         # Ignore references that have been renamed
         renamed_files.include?(filepath_that_defines_this_constant) ||
           # Ignore violations that are not in the allow-list of violation types to leave comments for
@@ -144,7 +148,6 @@ module DangerPackwerk
         line_number = offense.location.line
         referencing_file = offense.reference.relative_path
 
-        # PksOffense adapters provide Packwerk::ReferenceOffense-compatible interface
         message = offenses_formatter.format_offenses(T.unsafe(unique_offenses), repo_link, org_name, repo_url_builder: repo_url_builder)
         markdown(message, file: git_filesystem.convert_to_filesystem(referencing_file), line: line_number)
       end
