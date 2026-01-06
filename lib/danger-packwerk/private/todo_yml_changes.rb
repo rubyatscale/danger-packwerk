@@ -69,7 +69,12 @@ module DangerPackwerk
         renamed_constants = []
 
         added_violations.each do |violation|
-          filepath_that_defines_this_constant = Private.constant_resolver.resolve(violation.class_name)&.location
+          resolver = Private.constant_resolver
+          filepath_that_defines_this_constant = begin
+            resolver&.resolve(violation.class_name)&.location
+          rescue ConstantResolver::Error
+            nil
+          end
           renamed_constants << violation.class_name if renamed_files_after.include?(filepath_that_defines_this_constant)
         end
 

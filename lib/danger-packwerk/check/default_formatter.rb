@@ -19,24 +19,25 @@ module DangerPackwerk
 
       sig do
         override.params(
-          offenses: T::Array[Packwerk::ReferenceOffense],
+          offenses: T::Array[PksOffense],
           repo_link: String,
           org_name: String,
           repo_url_builder: T.nilable(T.proc.params(constant_path: String).returns(String))
         ).returns(String)
       end
       def format_offenses(offenses, repo_link, org_name, repo_url_builder: nil)
-        reference_offense = T.must(offenses.first)
+        offense = T.must(offenses.first)
         violation_types = offenses.map(&:violation_type)
-        referencing_file = reference_offense.reference.relative_path
+        referencing_file = offense.file
         referencing_file_pack = ParsePackwerk.package_from_path(referencing_file).name
         # We remove leading double colons as they feel like an implementation detail of packwerk.
-        constant_name = reference_offense.reference.constant.name.delete_prefix('::')
+        constant_name = offense.constant_name.delete_prefix('::')
 
-        constant_source_package_name = reference_offense.reference.constant.package.name
+        constant_source_package_name = offense.defining_pack_name
 
-        constant_location = reference_offense.reference.constant.location
+        # With pks, we don't have the exact constant location, so we use the package public path as a fallback
         constant_source_package = T.must(ParsePackwerk.all.find { |p| p.name == constant_source_package_name })
+        constant_location = "#{constant_source_package_name}/public"
         constant_source_package_ownership_info = Private::OwnershipInformation.for_package(constant_source_package, org_name)
 
         disclaimer = 'Before you run `bin/packwerk update-todo`, check out these quick suggestions:'

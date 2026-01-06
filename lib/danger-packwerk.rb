@@ -5,6 +5,7 @@
 require 'sorbet-runtime'
 
 module DangerPackwerk
+  extend T::Sig
   PACKAGE_TODO_PATTERN = T.let(/.*?package_todo\.yml\z/, Regexp)
   DEPENDENCY_VIOLATION_TYPE = 'dependency'
   PRIVACY_VIOLATION_TYPE = 'privacy'
@@ -17,4 +18,9 @@ module DangerPackwerk
   require 'danger-packwerk/update/default_formatter'
   require 'danger-packwerk/pks_offense'
   require 'danger-packwerk/pks_wrapper'
+
+  sig { void }
+  def self.reset_caches!
+    Private.reset_constant_resolver!
+  end
 end

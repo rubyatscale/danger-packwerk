@@ -21,48 +21,35 @@ module DangerPackwerk
           'packs/some_pack/some_class_with_new_name.rb',
           'packs/some_pack/some_class_with_old_name.rb'
         ].each { |path| write_file(path) }
-        allow(Packwerk::RailsLoadPaths).to receive(:for).and_return(load_paths)
         write_package_yml('packs/some_pack')
       end
 
       context 'using inputted formatter' do
         let(:packwerk) { dangerfile.packwerk }
-        let(:depended_on_constant) do
-          sorbet_double(Packwerk::ConstantContext, location: 'packs/referencing_pack/some_file.rb', package: double(name: 'packs/referencing_pack'), name: '::SomeFile')
-        end
-        let(:constant) do
-          sorbet_double(Packwerk::ConstantContext, location: 'packs/some_pack/private_constant.rb', package: double(name: 'packs/some_pack'), name: '::PrivateConstant')
-        end
         let(:generic_dependency_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
-            reference: depended_on_reference,
+          PksOffense.new(
             violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
-            message: 'Vanilla message about dependency violations',
-            location: Packwerk::Node::Location.new(12, 5)
+            file: 'packs/some_pack/my_file.rb',
+            line: 12,
+            column: 5,
+            constant_name: '::SomeFile',
+            referencing_pack_name: 'packs/referencing_pack',
+            defining_pack_name: 'packs/referencing_pack',
+            strict: false,
+            message: 'Vanilla message about dependency violations'
           )
         end
         let(:generic_privacy_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
-            reference: reference,
+          PksOffense.new(
             violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
-            message: 'Vanilla message about privacy violations',
-            location: Packwerk::Node::Location.new(12, 5)
-          )
-        end
-        let(:depended_on_reference) do
-          sorbet_double(
-            Packwerk::Reference,
-            relative_path: 'packs/some_pack/my_file.rb',
-            constant: depended_on_constant
-          )
-        end
-        let(:reference) do
-          sorbet_double(
-            Packwerk::Reference,
-            relative_path: 'packs/referencing_pack/some_file.rb',
-            constant: constant
+            file: 'packs/referencing_pack/some_file.rb',
+            line: 12,
+            column: 5,
+            constant_name: '::PrivateConstant',
+            referencing_pack_name: 'packs/referencing_pack',
+            defining_pack_name: 'packs/some_pack',
+            strict: false,
+            message: 'Vanilla message about privacy violations'
           )
         end
         let(:plugin) { packwerk }
@@ -71,10 +58,11 @@ module DangerPackwerk
             include Check::OffensesFormatter
 
             def format_offenses(offenses, repo_link, org_name, repo_url_builder:)
-              constant_location = offenses.first.reference.constant.location
-              constant_name = offenses.first.reference.constant.name
+              offense = offenses.first
+              constant_location = "#{offense.defining_pack_name}/public"
+              constant_name = offense.constant_name
               url = repo_url_builder&.call(constant_location.to_s)
-              offenses.map { |offense| "#{offense.message} [#{constant_name}](#{url})" }.join("\n\n")
+              offenses.map { |o| "#{o.message} [#{constant_name}](#{url})" }.join("\n\n")
             end
           end
         end
@@ -132,7 +120,7 @@ module DangerPackwerk
             expect(actual_markdowns.count).to eq 1
             actual_markdown = actual_markdowns.first
             expect(actual_markdown.message).to eq(<<~MSG.chomp)
-              Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+              Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/public)
             MSG
             expect(actual_markdown.line).to eq 12
             expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
@@ -153,7 +141,7 @@ module DangerPackwerk
               expect(actual_markdowns.count).to eq 1
               actual_markdown = actual_markdowns.first
               expect(actual_markdown.message).to eq(<<~MSG.chomp)
-                Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/private_constant.rb)
+                Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/some_pack/public)
               MSG
               expect(actual_markdown.line).to eq 12
               expect(actual_markdown.file).to eq 'packs/referencing_pack/some_file.rb'
@@ -889,33 +877,31 @@ module DangerPackwerk
 
         let(:danger_packwerk) { dangerfile.packwerk }
         let(:generic_privacy_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
+          PksOffense.new(
             violation_type: ::DangerPackwerk::PRIVACY_VIOLATION_TYPE,
-            reference: reference,
-            location: Packwerk::Node::Location.new(12, 5)
+            file: 'packs/referencing_package/some_file.rb',
+            line: 12,
+            column: 5,
+            constant_name: '::PrivateConstant',
+            referencing_pack_name: 'packs/referencing_package',
+            defining_pack_name: 'packs/gusto_slack',
+            strict: false,
+            message: ''
           )
         end
         let(:generic_dependency_violation) do
-          sorbet_double(
-            Packwerk::ReferenceOffense,
+          PksOffense.new(
             violation_type: ::DangerPackwerk::DEPENDENCY_VIOLATION_TYPE,
-            reference: reference,
-            location: Packwerk::Node::Location.new(12, 5)
+            file: 'packs/referencing_package/some_file.rb',
+            line: 12,
+            column: 5,
+            constant_name: '::PrivateConstant',
+            referencing_pack_name: 'packs/referencing_package',
+            defining_pack_name: 'packs/gusto_slack',
+            strict: false,
+            message: ''
           )
         end
-        let(:constant) do
-          sorbet_double(Packwerk::ConstantContext, package: slack_package, name: '::PrivateConstant', location: 'packs/gusto_slack/app/services/private_constant.rb')
-        end
-        let(:reference) do
-          sorbet_double(
-            Packwerk::Reference,
-            package: referencing_package,
-            relative_path: 'packs/referencing_package/some_file.rb',
-            constant: constant
-          )
-        end
-        let(:referencing_package) { ParsePackwerk.find('packs/referencing_package') }
         let(:offenses) { [] }
         let(:plugin) { danger_packwerk }
         let(:slack_package) { ParsePackwerk.find('packs/gusto_slack') }

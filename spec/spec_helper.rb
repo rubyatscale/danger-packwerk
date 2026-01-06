@@ -59,7 +59,7 @@ RSpec.configure do |config|
 
   config.before do |_example|
     ParsePackwerk.bust_cache!
-    allow(Packwerk::RailsLoadPaths).to receive(:extract_relevant_paths).and_return({})
+    DangerPackwerk.reset_caches!
   end
 end
 

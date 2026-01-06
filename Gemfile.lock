@@ -22,7 +22,6 @@ PATH
       code_ownership
       danger-plugin-api (~> 1.0)
       packs
-      packwerk
       parse_packwerk
       sorbet-runtime
       stringio

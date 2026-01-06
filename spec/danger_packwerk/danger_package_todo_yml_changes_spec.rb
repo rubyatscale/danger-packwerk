@@ -71,7 +71,6 @@ module DangerPackwerk
           'packs/some_pack/some_class_with_new_name.rb',
           'packs/some_pack/some_class_with_old_name.rb'
         ].each { |path| write_file(path) }
-        allow(Packwerk::RailsLoadPaths).to receive(:for).and_return(load_paths)
       end
 
       context 'when no package_todo.yml files have been added or modified' do

@@ -1,6 +1,6 @@
 # danger-packwerk
 
-`danger-packwerk` integrates [`packwerk`](https://github.com/Shopify/packwerk) with [`danger`](https://github.com/danger/danger) to provide inline comments in PRs related to boundaries in a Rails application.
+`danger-packwerk` integrates with [`danger`](https://github.com/danger/danger) to provide inline comments in PRs related to package boundaries in a Rails application. It uses [`pks`](https://github.com/rubyatscale/pks) for violation detection.
 
 ## Installation and Basic Usage
 Step 1: Add this line to your `Gemfile` (to whatever group your CI uses, as it is not needed in production) and `bundle install`:
@@ -21,7 +21,7 @@ That's it for basic usage!
 ## Advanced Usage
 
 There are currently two danger checks that ship with `danger-packwerk`:
-1) One that runs `bin/packwerk check` and leaves inline comments in source code on new violations
+1) One that runs `pks check` and leaves inline comments in source code on new violations
 2) One that looks at changes to `package_todo.yml` files and leaves inline comments on added violations.
 
 In upcoming iterations, we will include other danger checks, including:
@@ -42,10 +42,10 @@ To customize the message in the GitHub comment, pass in `offenses_formatter` to 
 class MyFormatter
   extend T::Sig
   include DangerPackwerk::Check::OffensesFormatter
-  # Packwerk::ReferenceOffense: https://github.com/Shopify/packwerk/blob/main/lib/packwerk/reference_offense.rb
+  # DangerPackwerk::PksOffense
   sig do
     override.params(
-      offenses: T::Array[Packwerk::ReferenceOffense],
+      offenses: T::Array[DangerPackwerk::PksOffense],
       repo_link: String,
       org_name: String
       repo_url_builder: T.nilable(T.proc.params(constant_path: String).returns(String))
@@ -84,7 +84,7 @@ Maybe you want to notify slack or do something else when there are packwerk fail
 
 ```ruby
 packwerk.check(
-  # Offenses are a T::Array[Packwerk::ReferenceOffense] => https://github.com/Shopify/packwerk/blob/main/lib/packwerk/reference_offense.rb
+  # Offenses are a T::Array[DangerPackwerk::PksOffense]
   on_failure: -> (offenses) do
     # Notify slack or otherwise do something extra!
   end
@@ -119,7 +119,7 @@ class MyFormatter
   # DangerPackwerk::BasicReferenceOffense
   sig do
     override.params(
-      offenses: T::Array[Packwerk::ReferenceOffense],
+      offenses: T::Array[DangerPackwerk::BasicReferenceOffense],
       repo_link: String,
       org_name: String
       repo_url_builder: T.nilable(T.proc.params(constant_path: String).returns(String))
