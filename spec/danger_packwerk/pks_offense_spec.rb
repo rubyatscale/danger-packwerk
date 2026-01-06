@@ -4,6 +4,7 @@ module DangerPackwerk
   RSpec.describe PksOffense do
     # PksOffense doesn't need Danger plugin context, but spec_helper includes it
     let(:plugin) { dangerfile.packwerk }
+    let(:fixtures_path) { File.join(__dir__, '..', 'fixtures', 'pks_output') }
     let(:privacy_offense_hash) do
       {
         'violation_type' => 'privacy',
@@ -150,6 +151,99 @@ module DangerPackwerk
         hash = { offense1 => 'first', offense2 => 'second' }
         expect(hash.length).to eq(1)
         expect(hash[offense1]).to eq('second')
+      end
+    end
+
+    describe 'fixture-based tests' do
+      describe 'no_violations.json' do
+        let(:json) { File.read(File.join(fixtures_path, 'no_violations.json')) }
+
+        it 'parses empty offenses array' do
+          offenses = described_class.from_json(json)
+          expect(offenses).to eq([])
+        end
+      end
+
+      describe 'privacy_violation.json' do
+        let(:json) { File.read(File.join(fixtures_path, 'privacy_violation.json')) }
+
+        it 'parses a single privacy violation' do
+          offenses = described_class.from_json(json)
+
+          expect(offenses.length).to eq(1)
+          offense = offenses.first
+          expect(offense.violation_type).to eq('privacy')
+          expect(offense.file).to eq('packs/my_pack/app/models/user.rb')
+          expect(offense.line).to eq(42)
+          expect(offense.column).to eq(10)
+          expect(offense.constant_name).to eq('::OtherPack::PrivateClass')
+          expect(offense.referencing_pack_name).to eq('packs/my_pack')
+          expect(offense.defining_pack_name).to eq('packs/other_pack')
+          expect(offense.strict).to eq(false)
+          expect(offense.privacy?).to eq(true)
+          expect(offense.dependency?).to eq(false)
+        end
+      end
+
+      describe 'dependency_violation.json' do
+        let(:json) { File.read(File.join(fixtures_path, 'dependency_violation.json')) }
+
+        it 'parses a single dependency violation with strict mode' do
+          offenses = described_class.from_json(json)
+
+          expect(offenses.length).to eq(1)
+          offense = offenses.first
+          expect(offense.violation_type).to eq('dependency')
+          expect(offense.file).to eq('packs/my_pack/app/services/user_service.rb')
+          expect(offense.line).to eq(15)
+          expect(offense.column).to eq(5)
+          expect(offense.constant_name).to eq('::ThirdPack::SomeConstant')
+          expect(offense.referencing_pack_name).to eq('packs/my_pack')
+          expect(offense.defining_pack_name).to eq('packs/third_pack')
+          expect(offense.strict).to eq(true)
+          expect(offense.privacy?).to eq(false)
+          expect(offense.dependency?).to eq(true)
+        end
+      end
+
+      describe 'multiple_violations.json' do
+        let(:json) { File.read(File.join(fixtures_path, 'multiple_violations.json')) }
+
+        it 'parses multiple violations of different types' do
+          offenses = described_class.from_json(json)
+
+          expect(offenses.length).to eq(3)
+
+          privacy_offenses = offenses.select(&:privacy?)
+          dependency_offenses = offenses.select(&:dependency?)
+
+          expect(privacy_offenses.length).to eq(2)
+          expect(dependency_offenses.length).to eq(1)
+        end
+
+        it 'preserves all offense details' do
+          offenses = described_class.from_json(json)
+
+          files = offenses.map(&:file)
+          expect(files).to contain_exactly(
+            'packs/my_pack/app/models/user.rb',
+            'packs/my_pack/app/services/user_service.rb',
+            'packs/another_pack/app/models/order.rb'
+          )
+        end
+      end
+
+      describe 'strict_mode_violation.json' do
+        let(:json) { File.read(File.join(fixtures_path, 'strict_mode_violation.json')) }
+
+        it 'parses strict mode privacy violation' do
+          offenses = described_class.from_json(json)
+
+          expect(offenses.length).to eq(1)
+          offense = offenses.first
+          expect(offense.strict).to eq(true)
+          expect(offense.privacy?).to eq(true)
+        end
       end
     end
   end

@@ -1,0 +1,15 @@
+{
+  "offenses": [
+    {
+      "violation_type": "dependency",
+      "file": "packs/my_pack/app/services/user_service.rb",
+      "line": 15,
+      "column": 5,
+      "constant_name": "::ThirdPack::SomeConstant",
+      "referencing_pack_name": "packs/my_pack",
+      "defining_pack_name": "packs/third_pack",
+      "strict": true,
+      "message": "Dependency violation: packs/my_pack does not declare packs/third_pack as a dependency"
+    }
+  ]
+}
