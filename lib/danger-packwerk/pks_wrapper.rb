@@ -15,9 +15,7 @@ module DangerPackwerk
 
       stdout, stderr, _status = run_pks_check(files)
 
-      if stderr.include?('command not found') || stderr.include?('No such file or directory')
-        raise PksBinaryNotFoundError, 'pks binary not found. Please install pks to use this feature.'
-      end
+      raise PksBinaryNotFoundError, 'pks binary not found. Please install pks to use this feature.' if stderr.include?('command not found') || stderr.include?('No such file or directory')
 
       PksOffense.from_json(stdout)
     end

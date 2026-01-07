@@ -28,14 +28,14 @@ module DangerPackwerk
     # Adapter classes for Packwerk::ReferenceOffense compatibility
     # These allow PksOffense to be used with Check::OffensesFormatter
     #
+    class PackageAdapter < T::Struct
+      const :name, String
+    end
+
     class ConstantAdapter < T::Struct
       const :name, String
       const :location, String
-      const :package, T.untyped # Returns an object with .name method
-    end
-
-    class PackageAdapter < T::Struct
-      const :name, String
+      const :package, PackageAdapter
     end
 
     class ReferenceAdapter < T::Struct

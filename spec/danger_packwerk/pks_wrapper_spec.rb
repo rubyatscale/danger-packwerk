@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'English'
 
 module DangerPackwerk
   RSpec.describe PksWrapper do
@@ -27,8 +28,14 @@ module DangerPackwerk
     end
 
     # Use real Process::Status from a successful command for Sorbet compatibility
-    let(:success_status) { `true`; $? }
-    let(:failure_status) { `false`; $? }
+    let(:success_status) do
+      `true`
+      $CHILD_STATUS
+    end
+    let(:failure_status) do
+      `false`
+      $CHILD_STATUS
+    end
 
     describe '.get_offenses_for_files' do
       it 'returns empty array when files is empty' do
