@@ -18,10 +18,108 @@ package_todo_yml_changes.check
 
 That's it for basic usage!
 
+## pks Integration
+
+`danger-packwerk` uses [pks](https://github.com/alexcrichton/pks), a fast Rust implementation of packwerk's boundary checking. This provides significant performance improvements, especially for large codebases.
+
+### Why pks?
+
+- **Speed**: pks is written in Rust and runs 10-100x faster than the Ruby packwerk implementation
+- **Compatibility**: pks produces the same violation types (dependency, privacy) as packwerk
+- **JSON Output**: Native JSON output format for reliable parsing
+
+### Installing pks
+
+You have two options for installing pks:
+
+**Option 1: Using dotslash (recommended)**
+
+[dotslash](https://dotslash-cli.com/) manages tool versions declaratively. Create a `pks` file in your project:
+
+```json
+#!/usr/bin/env dotslash
+
+{
+  "name": "pks",
+  "platforms": {
+    "macos-aarch64": {
+      "size": 3456789,
+      "hash": "sha256:...",
+      "url": "https://github.com/alexcrichton/pks/releases/download/v0.1.0/pks-aarch64-apple-darwin.tar.gz",
+      "path": "pks"
+    },
+    "linux-x86_64": {
+      "size": 4567890,
+      "hash": "sha256:...",
+      "url": "https://github.com/alexcrichton/pks/releases/download/v0.1.0/pks-x86_64-unknown-linux-gnu.tar.gz",
+      "path": "pks"
+    }
+  }
+}
+```
+
+Then ensure it's in your PATH or use `./pks` directly.
+
+**Option 2: Using cargo**
+
+If you have Rust installed:
+
+```bash
+cargo install pks
+```
+
+### Migration from packwerk
+
+No code changes are required. `danger-packwerk` automatically uses pks when calling `packwerk.check`. The integration is transparent—your existing `Dangerfile` configuration continues to work.
+
+If you were previously relying on `bin/packwerk check` being called directly, note that danger-packwerk now uses `pks check --output-format json` internally.
+
+### JSON Output Format
+
+pks outputs violations in a structured JSON format that danger-packwerk parses:
+
+```json
+{
+  "offenses": [
+    {
+      "violation_type": "privacy",
+      "file": "packs/my_pack/app/models/user.rb",
+      "line": 42,
+      "column": 10,
+      "constant_name": "::OtherPack::PrivateClass",
+      "referencing_pack_name": "packs/my_pack",
+      "defining_pack_name": "packs/other_pack",
+      "strict": false,
+      "message": "Privacy violation: ..."
+    }
+  ]
+}
+```
+
+This format provides precise line and column information for accurate inline comments.
+
+### Error Handling
+
+If pks is not installed or not found in PATH, danger-packwerk raises `DangerPackwerk::PksWrapper::PksBinaryNotFoundError` with the message:
+
+```
+pks binary not found. Please install pks to use this feature.
+```
+
+To check if pks is available before running:
+
+```ruby
+if DangerPackwerk::PksWrapper.pks_available?
+  packwerk.check
+else
+  warn "pks not installed, skipping packwerk check"
+end
+```
+
 ## Advanced Usage
 
 There are currently two danger checks that ship with `danger-packwerk`:
-1) One that runs `bin/packwerk check` and leaves inline comments in source code on new violations
+1) One that runs `pks check` and leaves inline comments in source code on new violations
 2) One that looks at changes to `package_todo.yml` files and leaves inline comments on added violations.
 
 In upcoming iterations, we will include other danger checks, including:
