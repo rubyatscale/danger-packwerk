@@ -94,6 +94,20 @@ module DangerPackwerk
           end
         end
 
+        context 'when pks binary is not found' do
+          before do
+            allow(PksWrapper).to receive(:get_offenses_for_files)
+              .and_raise(PksWrapper::PksBinaryNotFoundError, 'pks binary not found. Please install pks to use this feature.')
+          end
+
+          it 'raises PksBinaryNotFoundError with helpful message' do
+            expect { packwerk_check }.to raise_error(
+              PksWrapper::PksBinaryNotFoundError,
+              /pks binary not found.*install pks/
+            )
+          end
+        end
+
         context 'when the only files modified are ones that packwerk ignores' do
           let(:modified_files) { [write_file('frontend/javascript/some_file.js').to_s] }
 
