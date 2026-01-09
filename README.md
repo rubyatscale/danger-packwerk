@@ -1,6 +1,6 @@
 # danger-packwerk
 
-`danger-packwerk` integrates [`packwerk`](https://github.com/Shopify/packwerk) with [`danger`](https://github.com/danger/danger) to provide inline comments in PRs related to boundaries in a Rails application.
+`danger-packwerk` integrates [`packwerk`](https://github.com/Shopify/packwerk) (via [`pks`](https://github.com/rubyatscale/pks)) with [`danger`](https://github.com/danger/danger) to provide inline comments in PRs related to boundaries in a Rails application.
 
 ## Installation and Basic Usage
 Step 1: Add this line to your `Gemfile` (to whatever group your CI uses, as it is not needed in production) and `bundle install`:
@@ -20,7 +20,7 @@ That's it for basic usage!
 
 ## pks Integration
 
-`danger-packwerk` uses [pks](https://github.com/alexcrichton/pks), a fast Rust implementation of packwerk's boundary checking. This provides significant performance improvements, especially for large codebases.
+`danger-packwerk` uses [pks](https://github.com/rubyatscale/pks), a fast Rust implementation of packwerk's boundary checking. This provides significant performance improvements, especially for large codebases.
 
 ### Why pks?
 
