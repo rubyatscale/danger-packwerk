@@ -15,4 +15,6 @@ module DangerPackwerk
   require 'danger-packwerk/check/default_formatter'
   require 'danger-packwerk/update/offenses_formatter'
   require 'danger-packwerk/update/default_formatter'
+  require 'danger-packwerk/pks_offense'
+  require 'danger-packwerk/pks_wrapper'
 end
