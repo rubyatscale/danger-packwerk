@@ -57,10 +57,11 @@ module DangerPackwerk
             include Check::OffensesFormatter
 
             def format_offenses(offenses, repo_link, org_name, repo_url_builder:)
-              constant_location = offenses.first.reference.constant.location
-              constant_name = offenses.first.reference.constant.name
+              offense = offenses.first
+              constant_location = offense.file
+              constant_name = offense.constant_name
               url = repo_url_builder&.call(constant_location.to_s)
-              offenses.map { |offense| "#{offense.message} [#{constant_name}](#{url})" }.join("\n\n")
+              offenses.map { |o| "#{o.message} [#{constant_name}](#{url})" }.join("\n\n")
             end
           end
         end
@@ -601,7 +602,7 @@ module DangerPackwerk
                 actual_markdowns = dangerfile.status_report[:markdowns]
                 expect(actual_markdowns.count).to eq 1
                 actual_markdown = actual_markdowns.first
-                # The formatter uses offenses.first.reference.constant.location for all URLs
+                # The formatter uses offense.file for all URLs
                 expect(actual_markdown.message).to eq(<<~MSG.chomp)
                   Vanilla message about privacy violations [::PrivateConstant](https://github.com/MyOrg/my_repo/blob/my_branch/packs/referencing_pack/some_file.rb)
 

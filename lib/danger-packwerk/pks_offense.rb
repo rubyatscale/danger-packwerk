@@ -5,11 +5,7 @@ require 'json'
 module DangerPackwerk
   #
   # PksOffense represents a violation from pks JSON output.
-  # It is designed to have a compatible interface with BasicReferenceOffense
-  # so it can be used with the Update::OffensesFormatter.
-  #
-  # It also provides adapter objects (reference, location) for compatibility
-  # with Packwerk::ReferenceOffense interface used by Check::OffensesFormatter.
+  # It has a compatible interface with BasicReferenceOffense for use with formatters.
   #
   class PksOffense < T::Struct
     extend T::Sig
@@ -23,50 +19,6 @@ module DangerPackwerk
     const :defining_pack_name, String
     const :strict, T::Boolean
     const :message, String
-
-    #
-    # Adapter classes for Packwerk::ReferenceOffense compatibility
-    # These allow PksOffense to be used with Check::OffensesFormatter
-    #
-    class PackageAdapter < T::Struct
-      const :name, String
-    end
-
-    class ConstantAdapter < T::Struct
-      const :name, String
-      const :location, String
-      const :package, PackageAdapter
-    end
-
-    class ReferenceAdapter < T::Struct
-      const :relative_path, String
-      const :constant, ConstantAdapter
-    end
-
-    class LocationAdapter < T::Struct
-      const :line, Integer
-    end
-
-    # Adapter for Packwerk::ReferenceOffense.reference
-    sig { returns(ReferenceAdapter) }
-    def reference
-      package_adapter = PackageAdapter.new(name: defining_pack_name)
-      constant_adapter = ConstantAdapter.new(
-        name: constant_name,
-        location: file, # Best approximation - pks doesn't provide constant definition location
-        package: package_adapter
-      )
-      ReferenceAdapter.new(
-        relative_path: file,
-        constant: constant_adapter
-      )
-    end
-
-    # Adapter for Packwerk::ReferenceOffense.location
-    sig { returns(LocationAdapter) }
-    def location
-      LocationAdapter.new(line: line)
-    end
 
     # Alias methods for compatibility with BasicReferenceOffense interface
     sig { returns(String) }
