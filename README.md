@@ -3,7 +3,7 @@
 `danger-packwerk` integrates [`packwerk`](https://github.com/Shopify/packwerk) with [`danger`](https://github.com/danger/danger) to provide inline comments in PRs related to boundaries in a Rails application.
 
 ## Installation and Basic Usage
-Step 1: Add this line to your `Gemfile` (to whatever group your CI uses, as it is not needed in production) and `bundle install`:
+Step 1: Add this line to your `Gemfile` (to whatever group your CI uses, as it is not needed in production) and run `bundle install`:
 
 ```ruby
 gem 'danger-packwerk', group: :test
@@ -30,11 +30,11 @@ In upcoming iterations, we will include other danger checks, including:
 
 ## packwerk.check
 ![This is an image displaying a comment from the Danger github bot after running bin/packwerk check.](docs/check_1.png)
-![This is an image displaying a comment from the Danger github bot after running bin/packwerk check with the "quick suggestions" accordian open](docs/check_2.png)
+![This is an image displaying a comment from the Danger github bot after running bin/packwerk check with the "quick suggestions" accordion open](docs/check_2.png)
 
 Without any configuration, `packwerk.check` should just work. By default, it will post a maximum of 15 messages in a PR and it will not fail the build.
 
-`packwerk.check` can be configured to in the following ways:
+`packwerk.check` can be configured in the following ways:
 
 ### Change the message that displays in the markdown
 To customize the message in the GitHub comment, pass in `offenses_formatter` to `packwerk.check` in your `Dangerfile`. Here's a simple example:
@@ -108,7 +108,7 @@ You will also most likely want to customize the offenses formatter and provide s
 
 Without any configuration, `package_todo_yml_changes.check` should just work. By default, it will post a maximum of 15 messages in a PR, using default messaging defined within this gem.
 
-`package_todo_yml_changes.check` can be configured to in the following ways:
+`package_todo_yml_changes.check` can be configured in the following ways:
 
 ### Change the message that displays in the markdown
 To customize the message in the GitHub comment, pass in `offenses_formatter` to `package_todo_yml_changes.check` in your `Dangerfile`. Here's a simple example:
