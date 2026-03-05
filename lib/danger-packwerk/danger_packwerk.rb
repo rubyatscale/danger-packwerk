@@ -67,7 +67,7 @@ module DangerPackwerk
       repo_url_builder = ->(constant_path) { "#{repo_link}/blob/#{github.pr_json[:head][:ref]}/#{constant_path}" }
       org_name = github.pr_json[:base][:repo][:owner][:login]
 
-      # This is important because by default, Danger will leave a concantenated list of all its messages if it can't find a commentable place in the
+      # This is important because by default, Danger will leave a concatenated list of all its messages if it can't find a commentable place in the
       # diff to leave its message. This is an especially bad UX because it will be a huge wall of text not connected to the source of the issue.
       # Furthermore, dismissing these ensures that something like moving a file from pack to pack does not trigger the danger message. That is,
       # the danger message will only be triggered by actual code that someone has actually written in their PR.

@@ -30,7 +30,7 @@ In upcoming iterations, we will include other danger checks, including:
 
 ## packwerk.check
 ![This is an image displaying a comment from the Danger github bot after running bin/packwerk check.](docs/check_1.png)
-![This is an image displaying a comment from the Danger github bot after running bin/packwerk check with the "quick suggestions" accordian open](docs/check_2.png)
+![This is an image displaying a comment from the Danger github bot after running bin/packwerk check with the "quick suggestions" accordion open](docs/check_2.png)
 
 Without any configuration, `packwerk.check` should just work. By default, it will post a maximum of 15 messages in a PR and it will not fail the build.
 
