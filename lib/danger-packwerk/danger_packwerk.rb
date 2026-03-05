@@ -89,7 +89,7 @@ module DangerPackwerk
 
         # If a file has been modified via a rename, then `git.modified_files` will return an array that includes that file's *original* name.
         # Packwerk will ignore input files that do not exist, and when the PR only contains renamed Ruby files, that means packwerk check works
-        # off of an empty list. It's default behavior in that case is to scan *all* files, which can lead to abnormally long run times.
+        # off of an empty list. Its default behavior in that case is to scan *all* files, which can lead to abnormally long run times.
         # To avoid this, we gracefully return if there are no targeted files.
         # To avoid false negatives, we also look at renamed files after (above)
         file_exists = path.exist?
