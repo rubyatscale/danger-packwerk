@@ -1,5 +1,3 @@
-# AGENTS.md
-
 This file provides guidance to AI coding agents when working with code in this repository.
 
 ## What this project is
@@ -29,4 +27,4 @@ bundle exec srb tc
 
 - `lib/danger_packwerk.rb` — Danger plugin entry point; defines the `packwerk` Danger DSL method
 - `lib/danger_packwerk/` — core logic: runs packwerk, diffs violations against the base branch, formats inline GitHub review comments
-- `spec/` — RSpec tests; `spec/fixtures/` contains sample packwerk output and diff fixtures
+- `spec/` — RSpec tests
