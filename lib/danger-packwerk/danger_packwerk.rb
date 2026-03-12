@@ -67,7 +67,7 @@ module DangerPackwerk
       repo_url_builder = ->(constant_path) { "#{repo_link}/blob/#{github.pr_json[:head][:ref]}/#{constant_path}" }
       org_name = github.pr_json[:base][:repo][:owner][:login]
 
-      # This is important because by default, Danger will leave a concantenated list of all its messages if it can't find a commentable place in the
+      # This is important because by default, Danger will leave a concatenated list of all its messages if it can't find a commentable place in the
       # diff to leave its message. This is an especially bad UX because it will be a huge wall of text not connected to the source of the issue.
       # Furthermore, dismissing these ensures that something like moving a file from pack to pack does not trigger the danger message. That is,
       # the danger message will only be triggered by actual code that someone has actually written in their PR.
@@ -89,7 +89,7 @@ module DangerPackwerk
 
         # If a file has been modified via a rename, then `git.modified_files` will return an array that includes that file's *original* name.
         # Packwerk will ignore input files that do not exist, and when the PR only contains renamed Ruby files, that means packwerk check works
-        # off of an empty list. It's default behavior in that case is to scan *all* files, which can lead to abnormally long run times.
+        # off of an empty list. Its default behavior in that case is to scan *all* files, which can lead to abnormally long run times.
         # To avoid this, we gracefully return if there are no targeted files.
         # To avoid false negatives, we also look at renamed files after (above)
         file_exists = path.exist?
