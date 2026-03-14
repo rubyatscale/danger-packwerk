@@ -1,0 +1,15 @@
+{
+  "offenses": [
+    {
+      "violation_type": "privacy",
+      "file": "packs/strict_pack/app/services/api_client.rb",
+      "line": 23,
+      "column": 8,
+      "constant_name": "::CorePack::InternalApi",
+      "referencing_pack_name": "packs/strict_pack",
+      "defining_pack_name": "packs/core_pack",
+      "strict": true,
+      "message": "Privacy violation (strict mode): ::CorePack::InternalApi is private to packs/core_pack"
+    }
+  ]
+}

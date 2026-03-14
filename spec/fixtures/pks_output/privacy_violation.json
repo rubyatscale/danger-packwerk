@@ -1,0 +1,15 @@
+{
+  "offenses": [
+    {
+      "violation_type": "privacy",
+      "file": "packs/my_pack/app/models/user.rb",
+      "line": 42,
+      "column": 10,
+      "constant_name": "::OtherPack::PrivateClass",
+      "referencing_pack_name": "packs/my_pack",
+      "defining_pack_name": "packs/other_pack",
+      "strict": false,
+      "message": "Privacy violation: ::OtherPack::PrivateClass is private to packs/other_pack"
+    }
+  ]
+}
