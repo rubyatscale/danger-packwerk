@@ -5,7 +5,7 @@ source 'https://rubygems.org'
 # Specify your gem's dependencies in danger-packwerk.gemspec
 gemspec
 
-# Override the version of packwerk that is installed by the gemspec
+  gem 'faraday', '>= 2.14.2'
 gem 'packwerk', github: 'Shopify/packwerk', branch: 'main'
 
 # Development dependencies
