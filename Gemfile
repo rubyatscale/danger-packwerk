@@ -10,6 +10,7 @@ gem 'packwerk', github: 'Shopify/packwerk', branch: 'main'
 
 # Development dependencies
 gem 'pry'
+gem 'rack', '>= 3.1.21'
 gem 'railties'
 gem 'rake'
 gem 'rspec', '~> 3.0'
