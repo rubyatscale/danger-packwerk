@@ -1,0 +1,21 @@
+gem:
+  exclude:
+    - base64
+    - benchmark
+    - bigdecimal
+    - date
+    - drb
+    - erb
+    - json
+    - logger
+    - pp
+    - pstore
+    - psych
+    - racc
+    - rdoc
+    - reline
+    - rexml
+    - securerandom
+    - stringio
+    - tsort
+    - uri
