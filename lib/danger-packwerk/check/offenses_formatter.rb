@@ -12,7 +12,7 @@ module DangerPackwerk
 
       sig do
         abstract.params(
-          offenses: T::Array[Packwerk::ReferenceOffense],
+          offenses: T::Array[PksOffense],
           repo_link: String,
           org_name: String,
           repo_url_builder: T.nilable(T.proc.params(constant_path: String).returns(String))

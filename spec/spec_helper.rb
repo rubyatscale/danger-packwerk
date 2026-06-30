@@ -74,3 +74,27 @@ def write_package_yml(
 )
   write_pack(pack_name, { 'enforce_dependencies' => true, 'enforce_privacy' => true })
 end
+
+def build_pks_offense(
+  violation_type:,
+  file:,
+  line:,
+  constant_name:,
+  referencing_pack_name:,
+  defining_pack_name:,
+  column: 5,
+  strict: false,
+  message: ''
+)
+  DangerPackwerk::PksOffense.new(
+    violation_type: violation_type,
+    file: file,
+    line: line,
+    column: column,
+    constant_name: constant_name,
+    referencing_pack_name: referencing_pack_name,
+    defining_pack_name: defining_pack_name,
+    strict: strict,
+    message: message
+  )
+end

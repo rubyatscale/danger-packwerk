@@ -1,0 +1,37 @@
+{
+  "offenses": [
+    {
+      "violation_type": "privacy",
+      "file": "packs/my_pack/app/models/user.rb",
+      "line": 42,
+      "column": 10,
+      "constant_name": "::OtherPack::PrivateClass",
+      "referencing_pack_name": "packs/my_pack",
+      "defining_pack_name": "packs/other_pack",
+      "strict": false,
+      "message": "Privacy violation: ::OtherPack::PrivateClass is private to packs/other_pack"
+    },
+    {
+      "violation_type": "dependency",
+      "file": "packs/my_pack/app/services/user_service.rb",
+      "line": 15,
+      "column": 5,
+      "constant_name": "::ThirdPack::SomeConstant",
+      "referencing_pack_name": "packs/my_pack",
+      "defining_pack_name": "packs/third_pack",
+      "strict": true,
+      "message": "Dependency violation: packs/my_pack does not declare packs/third_pack as a dependency"
+    },
+    {
+      "violation_type": "privacy",
+      "file": "packs/another_pack/app/models/order.rb",
+      "line": 88,
+      "column": 15,
+      "constant_name": "::OtherPack::SecretHelper",
+      "referencing_pack_name": "packs/another_pack",
+      "defining_pack_name": "packs/other_pack",
+      "strict": false,
+      "message": "Privacy violation: ::OtherPack::SecretHelper is private to packs/other_pack"
+    }
+  ]
+}
