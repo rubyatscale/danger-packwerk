@@ -38,7 +38,7 @@ module DangerPackwerk
 
     # We probably want to check the `include` key of `packwerk.yml`. By default, this value is "**/*.{rb,rake,erb}",
     # so we hardcode this in for now. If this blocks a user, we can take that opportunity to read from `packwerk.yml`.
-    TARGETED_FILES_EXTENSIONS = T.let(%w[.erb .rake .rb].freeze, T::Array[String])
+    TARGETED_FILES_EXTENSIONS = %w[.erb .rake .rb].freeze
 
     sig do
       params(
