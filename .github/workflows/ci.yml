@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   run_tests:
     runs-on: ubuntu-latest
@@ -53,6 +56,7 @@ jobs:
         run: bundle exec rubocop
   notify_on_failure:
     runs-on: ubuntu-latest
+    permissions: {}
     needs: [run_tests, static_type_check, run_linter]
     if: ${{ failure() && github.ref == 'refs/heads/main' }}
     env:
