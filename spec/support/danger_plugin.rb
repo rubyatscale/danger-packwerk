@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.shared_context 'danger plugin' do
   let(:dangerfile) { testing_dangerfile }
   let(:modified_files) { [] }

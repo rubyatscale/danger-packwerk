@@ -45,9 +45,6 @@ Style/Documentation:
 Style/SignalException:
   Enabled: false
 
-Style/FrozenStringLiteralComment:
-  Enabled: false
-
 Style/MultilineBlockChain:
   Enabled: false
 
